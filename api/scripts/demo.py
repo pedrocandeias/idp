@@ -8,12 +8,18 @@ from pathlib import Path
 
 import requests
 
+# Ensure project root on path when executed as a file
+import sys
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from app.db import SessionLocal
 from app import models
 
 
 BASE = os.getenv("DEMO_BASE_URL", "http://localhost:8000")
-EMAIL = os.getenv("DEMO_EMAIL", "demo@idp.local")
+EMAIL = os.getenv("DEMO_EMAIL", "demo@example.com")
 PASSWORD = os.getenv("DEMO_PASSWORD", "demo123")
 
 
@@ -48,14 +54,6 @@ def main():
     r.raise_for_status()
     token = r.json()["access_token"]
 
-    # Create rulepack (if not exists)
-    with open(Path(__file__).resolve().parent.parent / "seeds" / "rulepack_general_eu_v1.json", "r") as f:
-        rp_payload = json.load(f)
-    lst = api("GET", "/api/v1/rulepacks", token).json()
-    rp = next((x for x in lst if x.get("name") == rp_payload["name"]), None)
-    if not rp:
-        rp = api("POST", "/api/v1/rulepacks", token, json=rp_payload).json()
-
     # Create project
     proj = api("POST", "/api/v1/projects", token, json={"name": "Demo Project", "description": "Demo"}).json()
 
@@ -73,6 +71,21 @@ def main():
         db.refresh(sc)
         scenario_id = sc.id
 
+    # Create rulepack in DB (org-scoped)
+    with open(Path(__file__).resolve().parent.parent / "seeds" / "rulepack_general_eu_v1.json", "r") as f:
+        rp_payload = json.load(f)
+    with SessionLocal() as db:
+        existing = db.query(models.RulePack).filter(models.RulePack.name == rp_payload.get("name"), models.RulePack.org_id == proj["org_id"]).first()
+        if not existing:
+            rp_obj = models.RulePack(org_id=proj["org_id"], name=rp_payload.get("name"), rules=rp_payload.get("rules"))
+            setattr(rp_obj, "version", rp_payload.get("version", "1.0.0"))
+            db.add(rp_obj)
+            db.commit()
+            db.refresh(rp_obj)
+            rp_id = rp_obj.id
+        else:
+            rp_id = existing.id
+
     # Upload artifact
     gltf_path = Path(__file__).resolve().parent.parent / "seeds" / "minimal.gltf"
     files = {
@@ -84,7 +97,7 @@ def main():
     art = up.json()
 
     # Enqueue evaluation
-    enq = api("POST", "/api/v1/evaluations", token, json={"artifact_id": art["id"], "scenario_id": scenario_id, "rulepack_id": rp["id"]}).json()
+    enq = api("POST", "/api/v1/evaluations", token, json={"artifact_id": art["id"], "scenario_id": scenario_id, "rulepack_id": rp_id}).json()
     run_id = enq["id"]
 
     # Wait for completion
@@ -101,4 +114,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

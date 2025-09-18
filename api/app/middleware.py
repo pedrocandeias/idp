@@ -28,6 +28,11 @@ async def audit_middleware(request: Request, call_next: Callable):
     body_bytes = b""
     try:
         body_bytes = await request.body()
+        # re-inject body so downstream can read it
+        async def _receive():  # type: ignore
+            return {"type": "http.request", "body": body_bytes, "more_body": False}
+
+        request._receive = _receive  # type: ignore[attr-defined]
     except Exception:
         pass
     # sanitize

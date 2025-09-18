@@ -57,7 +57,7 @@ class DesignArtifactCreate(BaseModel):
     name: str
     type: Optional[str] = None
     uri: Optional[str] = None
-    metadata: Optional[dict] = None
+    meta: Optional[dict] = None
 
 
 class DesignArtifactRead(DesignArtifactCreate):

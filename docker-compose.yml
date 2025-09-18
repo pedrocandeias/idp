@@ -7,7 +7,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    command: ["/app/entrypoint.sh"]
+    command: ["sh", "/app/entrypoint.sh"]
     env_file:
       - .env
     working_dir: /app

@@ -66,7 +66,7 @@ def upload_artifact(
             name=name,
             type=type,
             uri=None,
-            metadata=None,
+            meta=None,
             object_key=key,
             params_key=None,
             object_mime=MIME_BY_EXT.get(ext),

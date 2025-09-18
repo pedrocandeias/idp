@@ -16,3 +16,5 @@ Jinja2==3.1.4
 WeasyPrint==62.3
 typer==0.12.5
 platformdirs==4.3.6
+email-validator==2.2.0
+python-multipart==0.0.9

@@ -28,5 +28,4 @@ demo:
 	# Boot services
 	docker compose up -d --build
 	# Give API a moment and run demo script inside api container
-	docker compose exec -T api python scripts/demo.py
-
+	docker compose exec -T api sh -lc "cd /app && python scripts/demo.py"
