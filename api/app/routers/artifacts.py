@@ -13,6 +13,7 @@ from .. import models
 from ..schemas import DesignArtifactRead
 from ..storage import upload_bytes, presigned_get, presigned_put, new_object_key, get_s3_client
 from ..config import settings
+from ..rbac import require_role
 
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/artifacts", tags=["artifacts"])
@@ -48,6 +49,7 @@ def upload_artifact(
         raise HTTPException(status_code=404, detail="Project not found")
     if "superadmin" not in (current.roles or []) and project.org_id != current.org_id:
         raise HTTPException(status_code=403, detail="Forbidden")
+    require_role(current, ["org_admin", "designer"])  # upload requires edit role
 
     if presign:
         if not name:
@@ -126,4 +128,3 @@ def upload_artifact(
     resp = DesignArtifactRead.model_validate(art)
     resp.presigned_url = url
     return resp
-

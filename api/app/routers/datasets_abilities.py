@@ -7,6 +7,7 @@ from ..dependencies import get_current_user
 from ..db import get_db
 from .. import models
 from ..schemas import AbilityProfileRead, AbilityProfileCreate
+from ..rbac import require_role
 
 
 router = APIRouter(prefix="/api/v1/datasets/abilities", tags=["datasets:abilities"])
@@ -26,6 +27,7 @@ def list_abilities(current=Depends(get_current_user), db: Session = Depends(get_
 def create_ability(payload: AbilityProfileCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
     if not current.org_id:
         raise HTTPException(status_code=400, detail="User not in an organization")
+    require_role(current, ["org_admin", "researcher"])  # abilities create
     item = models.AbilityProfile(
         org_id=current.org_id,
         name=payload.name,
@@ -35,4 +37,3 @@ def create_ability(payload: AbilityProfileCreate, current=Depends(get_current_us
     db.commit()
     db.refresh(item)
     return AbilityProfileRead.model_validate(item)
-

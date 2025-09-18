@@ -101,13 +101,14 @@ class AbilityProfileRead(AbilityProfileCreate):
 
 
 class RulePackCreate(BaseModel):
-    org_id: int
     name: str
+    version: str
     rules: Optional[dict] = None
 
 
 class RulePackRead(RulePackCreate):
     id: int
+    org_id: int
 
     class Config:
         from_attributes = True
@@ -160,6 +161,11 @@ class ReportCreate(BaseModel):
 
 class ReportRead(ReportCreate):
     id: int
+    html_key: Optional[str] = None
+    pdf_key: Optional[str] = None
+    checksum_sha256: Optional[str] = None
+    presigned_html_url: Optional[str] = None
+    presigned_pdf_url: Optional[str] = None
 
     class Config:
         from_attributes = True

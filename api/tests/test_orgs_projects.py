@@ -23,7 +23,7 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(db_session, monkeypatch):
     def override_get_db():
         try:
             yield db_session
@@ -31,17 +31,22 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    # Make middleware use test session
+    import app.db as app_db
+    app_db.SessionLocal = lambda: db_session
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
 
 
-def test_create_org_register_login_create_project_flow(client):
-    # Create organization
-    r = client.post("/api/v1/organizations", json={"name": "org1"})
-    assert r.status_code == 201, r.text
-    org = r.json()
-    org_id = org["id"]
+def test_create_org_register_login_create_project_flow(client, db_session):
+    # Create organization directly
+    from app import models
+    org = models.Org(name="org1")
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
+    org_id = org.id
 
     # Register user in the org
     email = "user@example.com"
@@ -71,4 +76,3 @@ def test_create_org_register_login_create_project_flow(client):
     assert r.status_code == 200
     items = r.json()
     assert any(p["id"] == proj["id"] for p in items)
-

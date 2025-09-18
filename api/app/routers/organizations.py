@@ -5,13 +5,15 @@ from ..db import get_db
 from .. import models
 from ..schemas import OrganizationCreate, OrganizationRead
 from ..dependencies import get_current_user
+from ..rbac import require_role
 
 
 router = APIRouter(prefix="/api/v1/organizations", tags=["organizations"])
 
 
 @router.post("", response_model=OrganizationRead, status_code=201)
-def create_org(payload: OrganizationCreate, db: Session = Depends(get_db)) -> OrganizationRead:
+def create_org(payload: OrganizationCreate, current=Depends(get_current_user), db: Session = Depends(get_db)) -> OrganizationRead:
+    require_role(current, ["superadmin"])  # only superadmin can create orgs
     existing = db.query(models.Org).filter(models.Org.name == payload.name).first()
     if existing:
         raise HTTPException(status_code=409, detail="Organization already exists")
@@ -47,6 +49,7 @@ def update_org(org_id: int, payload: OrganizationCreate, current=Depends(get_cur
     org = db.get(models.Org, org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Not found")
+    require_role(current, ["superadmin", "org_admin"])  # must be admin of own org or superadmin
     if "superadmin" not in (current.roles or []) and current.org_id != org.id:
         raise HTTPException(status_code=403, detail="Forbidden")
     org.name = payload.name
@@ -61,6 +64,7 @@ def delete_org(org_id: int, current=Depends(get_current_user), db: Session = Dep
     org = db.get(models.Org, org_id)
     if not org:
         raise HTTPException(status_code=404, detail="Not found")
+    require_role(current, ["superadmin"])  # destructive op: superadmin only
     if "superadmin" not in (current.roles or []) and current.org_id != org.id:
         raise HTTPException(status_code=403, detail="Forbidden")
     db.delete(org)

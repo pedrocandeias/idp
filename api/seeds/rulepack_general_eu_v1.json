@@ -1,0 +1,28 @@
+{
+  "name": "General EU v1",
+  "version": "1.0.0",
+  "rules": [
+    {"id": "reach_height_seated_min", "name": "Min reachable height seated", "citation": "EN 12182", "variables": ["reach_height_cm"], "thresholds": {"min_cm": 120}, "condition": "reach_height_cm >= min_cm", "severity": "medium", "remediation": "Lower controls within seated reach."},
+    {"id": "reach_height_standing_min", "name": "Min reachable height standing", "citation": "EN 12182", "variables": ["reach_height_cm"], "thresholds": {"min_cm": 180}, "condition": "reach_height_cm >= min_cm", "severity": "low", "remediation": "Adjust layout to meet reach."},
+    {"id": "control_spacing_min", "name": "Min control spacing", "citation": "EN 894-3", "variables": ["spacing_mm"], "thresholds": {"min_mm": 10}, "condition": "spacing_mm >= min_mm", "severity": "medium", "remediation": "Increase spacing between controls."},
+    {"id": "button_size_min", "name": "Min button size", "citation": "EN 301 549", "variables": ["button_width_mm", "button_height_mm"], "thresholds": {"min_mm": 9}, "condition": "button_width_mm >= min_mm and button_height_mm >= min_mm", "severity": "high", "remediation": "Increase button dimensions."},
+    {"id": "contrast_ratio_wcag", "name": "WCAG contrast ratio", "citation": "WCAG 2.1", "variables": ["contrast_ratio"], "thresholds": {"min_ratio": 4.5}, "condition": "contrast_ratio >= min_ratio", "severity": "high", "remediation": "Increase text/background contrast."},
+    {"id": "knob_torque_max", "name": "Max torque for knob", "citation": "EN 894-2", "variables": ["torque_Nm", "max_torque_Nm"], "thresholds": {}, "condition": "torque_Nm <= max_torque_Nm", "severity": "medium", "remediation": "Reduce torque or increase diameter."},
+
+    {"id": "text_size_min", "name": "Min text size", "citation": "EN 301 549", "variables": ["text_x_height_mm"], "thresholds": {"min_mm": 1.5}, "condition": "text_x_height_mm >= min_mm", "severity": "medium", "remediation": "Increase text size."},
+    {"id": "control_force_max", "name": "Max control force", "citation": "EN 894-2", "variables": ["control_force_N"], "thresholds": {"max_N": 30}, "condition": "control_force_N <= max_N", "severity": "medium", "remediation": "Reduce required force."},
+    {"id": "handle_diameter_min", "name": "Min handle diameter", "citation": "ISO 9241-410", "variables": ["handle_diameter_mm"], "thresholds": {"min_mm": 30}, "condition": "handle_diameter_mm >= min_mm", "severity": "low", "remediation": "Increase handle diameter."},
+    {"id": "glare_index_max", "name": "Max glare index", "citation": "EN 12464-1", "variables": ["ugr"], "thresholds": {"max": 19}, "condition": "ugr <= max", "severity": "low", "remediation": "Reduce glare."},
+    {"id": "stair_riser_height_max", "name": "Max stair riser height", "citation": "EN 1154", "variables": ["riser_height_mm"], "thresholds": {"max_mm": 180}, "condition": "riser_height_mm <= max_mm", "severity": "medium", "remediation": "Reduce riser height."},
+    {"id": "handrail_diameter_range", "name": "Handrail diameter", "citation": "ISO 21542", "variables": ["handrail_diameter_mm"], "thresholds": {"min_mm": 30, "max_mm": 50}, "condition": "handrail_diameter_mm >= min_mm and handrail_diameter_mm <= max_mm", "severity": "low", "remediation": "Adjust handrail diameter."},
+    {"id": "ramp_slope_max", "name": "Max ramp slope", "citation": "ISO 21542", "variables": ["slope_ratio"], "thresholds": {"max": 0.0833}, "condition": "slope_ratio <= max", "severity": "high", "remediation": "Flatten ramp."},
+    {"id": "door_clear_width_min", "name": "Min door clear width", "citation": "ISO 21542", "variables": ["clear_width_mm"], "thresholds": {"min_mm": 850}, "condition": "clear_width_mm >= min_mm", "severity": "high", "remediation": "Widen door."},
+    {"id": "control_label_size_min", "name": "Min control label size", "citation": "EN 61310-1", "variables": ["label_height_mm"], "thresholds": {"min_mm": 3}, "condition": "label_height_mm >= min_mm", "severity": "low", "remediation": "Increase label size."},
+    {"id": "audible_alarm_level_min", "name": "Min audible alarm level", "citation": "EN 60601-1-8", "variables": ["alarm_level_dB"], "thresholds": {"min_dB": 65}, "condition": "alarm_level_dB >= min_dB", "severity": "medium", "remediation": "Increase alarm level."},
+    {"id": "visual_alarm_flash_rate", "name": "Visual alarm flash rate", "citation": "EN 54-3", "variables": ["flash_hz"], "thresholds": {"min": 1, "max": 2}, "condition": "flash_hz >= min and flash_hz <= max", "severity": "low", "remediation": "Adjust flash rate."},
+    {"id": "walkway_width_min", "name": "Min walkway width", "citation": "ISO 21542", "variables": ["width_mm"], "thresholds": {"min_mm": 1200}, "condition": "width_mm >= min_mm", "severity": "medium", "remediation": "Widen walkway."},
+    {"id": "stairs_tread_depth_min", "name": "Min stair tread depth", "citation": "ISO 21542", "variables": ["tread_depth_mm"], "thresholds": {"min_mm": 280}, "condition": "tread_depth_mm >= min_mm", "severity": "low", "remediation": "Increase tread depth."},
+    {"id": "operable_force_push_max", "name": "Max push force", "citation": "ADA Advisory", "variables": ["push_force_N"], "thresholds": {"max_N": 22}, "condition": "push_force_N <= max_N", "severity": "medium", "remediation": "Reduce push force."}
+  ]
+}
+

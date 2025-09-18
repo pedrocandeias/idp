@@ -3,12 +3,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 COPY package.json /app/package.json
+COPY tsconfig.json /app/tsconfig.json
+COPY vite.config.ts /app/vite.config.ts
+COPY index.html /app/index.html
+COPY src /app/src
 
-# Avoid installing deps yet; placeholder container
-
-COPY . /app
+RUN npm install --no-audit --no-fund
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "while sleep 3600; do :; done"]
-
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

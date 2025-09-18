@@ -24,23 +24,25 @@ def db_session():
 
 
 @pytest.fixture(scope="function")
-def client(db_session):
+def client(db_session, monkeypatch):
     def override_get_db():
         try:
             yield db_session
         finally:
             pass
     app.dependency_overrides[get_db] = override_get_db
+    import app.db as app_db
+    app_db.SessionLocal = lambda: db_session
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
 
 
-def get_auth_headers(client):
-    # Create organization
-    r = client.post("/api/v1/organizations", json={"name": "orgD"})
-    assert r.status_code == 201
-    org_id = r.json()["id"]
+def get_auth_headers(client, db_session):
+    from app import models
+    org = models.Org(name="orgD")
+    db_session.add(org); db_session.commit(); db_session.refresh(org)
+    org_id = org.id
     # Register user
     email = "d@example.com"
     password = "secret123"
@@ -57,7 +59,7 @@ def get_auth_headers(client):
 
 
 def test_anthro_percentiles(client):
-    headers = get_auth_headers(client)
+    headers = get_auth_headers(client, db_session)
 
     ds = {
         "name": "Anthro Test",
@@ -87,4 +89,3 @@ def test_anthro_percentiles(client):
     r = client.get("/api/v1/datasets/anthropometrics", headers=headers)
     assert r.status_code == 200
     assert any(item["id"] == dataset["id"] for item in r.json())
-

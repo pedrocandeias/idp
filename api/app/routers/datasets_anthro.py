@@ -8,6 +8,7 @@ from ..db import get_db
 from .. import models
 from ..schemas import AnthropometricDatasetCreate, AnthropometricDatasetRead
 from ..services.datasets import query_percentile
+from ..rbac import require_role
 
 
 router = APIRouter(prefix="/api/v1/datasets/anthropometrics", tags=["datasets:anthropometrics"])
@@ -27,6 +28,7 @@ def list_anthro(current=Depends(get_current_user), db: Session = Depends(get_db)
 def create_anthro(payload: AnthropometricDatasetCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
     if not current.org_id:
         raise HTTPException(status_code=400, detail="User not in an organization")
+    require_role(current, ["org_admin", "researcher"])  # dataset create
     item = models.AnthropometricDataset(
         org_id=current.org_id,
         name=payload.name,
@@ -63,4 +65,3 @@ def get_percentile(
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"metric": metric, "percentile": percentile, "value": value}
-

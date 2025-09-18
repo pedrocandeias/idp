@@ -109,6 +109,7 @@ class RulePack(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     org_id: Mapped[int] = mapped_column(ForeignKey("orgs.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rules: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
@@ -142,6 +143,8 @@ class EvaluationRun(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    results_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    inclusivity_index_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
 
 class AdaptiveComponent(Base):
@@ -163,6 +166,9 @@ class Report(Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    html_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    pdf_key: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    checksum_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
@@ -172,7 +178,7 @@ class AuditEvent(Base):
     __tablename__ = "audit_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    org_id: Mapped[int] = mapped_column(ForeignKey("orgs.id"), nullable=False)
+    org_id: Mapped[int | None] = mapped_column(ForeignKey("orgs.id"), nullable=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String(255), nullable=False)
     details: Mapped[dict | None] = mapped_column(JSON, nullable=True)

@@ -22,14 +22,14 @@ services:
 
   worker:
     build:
-      context: ./worker
+      context: ./api
       dockerfile: Dockerfile
-    command: ["sleep", "infinity"]
+    command: ["sh", "-c", "celery -A app.celery_app.celery_app worker --loglevel=INFO"]
     env_file:
       - .env
     working_dir: /app
     volumes:
-      - ./worker:/app
+      - ./api:/app
     depends_on:
       - postgres
       - redis

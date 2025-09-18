@@ -23,3 +23,10 @@ lint:
 pre-commit-install:
 	pre-commit install
 
+.PHONY: demo
+demo:
+	# Boot services
+	docker compose up -d --build
+	# Give API a moment and run demo script inside api container
+	docker compose exec -T api python scripts/demo.py
+

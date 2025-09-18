@@ -51,6 +51,8 @@ def client(db_session, monkeypatch):
         finally:
             pass
     app.dependency_overrides[get_db] = override_get_db
+    import app.db as app_db
+    app_db.SessionLocal = lambda: db_session
 
     # Storage overrides
     fake = FakeS3()
@@ -66,10 +68,9 @@ def client(db_session, monkeypatch):
 
 
 def auth_headers(client, db_session):
-    # Create org
-    r = client.post("/api/v1/organizations", json={"name": "orgX"})
-    assert r.status_code == 201
-    org = r.json()
+    from app import models
+    org = models.Org(name="orgX")
+    db_session.add(org); db_session.commit(); db_session.refresh(org)
     # Register user
     email = "u@example.com"
     password = "secret123"
