@@ -1,0 +1,13 @@
+{
+  "name": "Demo Anthropometrics",
+  "source": "demo",
+  "schema": {"units": {"stature": "cm"}},
+  "distributions": {
+    "stature": [
+      {"region": "NA", "sex": "M", "age": "18-25", "percentiles": {"p5": 165.0, "p50": 177.0, "p95": 190.0}},
+      {"region": "NA", "sex": "F", "age": "18-25", "percentiles": {"p5": 153.0, "p50": 164.0, "p95": 175.0}},
+      {"region": "all", "sex": "all", "age": "all", "percentiles": {"p5": 160.0, "p50": 170.0, "p95": 185.0}}
+    ]
+  }
+}
+

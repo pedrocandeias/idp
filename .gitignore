@@ -1,0 +1,26 @@
+# General
+.DS_Store
+*.log
+*.tmp
+*.swp
+.env
+.venv/
+venv/
+dist/
+build/
+coverage/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+web/node_modules/
+web/.pnpm-store/
+web/.npmrc
+
+# Docker
+.docker/
+

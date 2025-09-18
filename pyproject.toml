@@ -1,0 +1,15 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+exclude = [".venv", "venv", "node_modules", "build", "dist"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip = [".venv", "venv", "node_modules", "build", "dist"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = [".venv", "venv", "node_modules", "build", "dist"]
+

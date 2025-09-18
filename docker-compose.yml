@@ -1,0 +1,93 @@
+version: "3.9"
+
+name: idp
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    command: ["/app/entrypoint.sh"]
+    env_file:
+      - .env
+    working_dir: /app
+    volumes:
+      - ./api:/app
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    command: ["sleep", "infinity"]
+    env_file:
+      - .env
+    working_dir: /app
+    volumes:
+      - ./worker:/app
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    command: ["sh", "-c", "while sleep 3600; do :; done"]
+    env_file:
+      - .env
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+  docs:
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    command: ["sh", "-c", "while sleep 3600; do :; done"]
+    volumes:
+      - ./docs:/docs
+
+  postgres:
+    image: postgres:15-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-idp}
+      POSTGRES_USER: ${POSTGRES_USER:-idp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT:-9001}"
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  postgres_data:
+  minio_data:

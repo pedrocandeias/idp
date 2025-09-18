@@ -1,0 +1,8 @@
+{
+  "name": "Demo Abilities",
+  "data": {
+    "vision": {"acuity": "20/20", "color": "normal"},
+    "mobility": {"reach_cm": 70}
+  }
+}
+
