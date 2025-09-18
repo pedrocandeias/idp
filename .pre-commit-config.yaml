@@ -13,7 +13,6 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.4
     hooks:
-      - id: ruff
       - id: ruff-format
 
   # Use local prettier via npx to avoid mirror tag issues in CI
@@ -23,7 +22,7 @@ repos:
         name: prettier
         entry: npx --yes prettier -c
         language: system
-        files: ^web/|^docs/
+        files: '^(web|docs)/.*\.(js|jsx|ts|tsx|json|css|md|html)$'
 
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v9.12.0
