@@ -16,11 +16,13 @@ repos:
       - id: ruff
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.2.5
+  # Use local prettier via npx to avoid mirror tag issues in CI
+  - repo: local
     hooks:
       - id: prettier
-        additional_dependencies: []
+        name: prettier
+        entry: npx --yes prettier -c
+        language: system
         files: ^web/|^docs/
 
   - repo: https://github.com/pre-commit/mirrors-eslint
