@@ -15,21 +15,13 @@ repos:
     hooks:
       - id: ruff-format
 
-  # Use local prettier via npx to avoid mirror tag issues in CI
-  - repo: local
-    hooks:
-      - id: prettier
-        name: prettier
-        entry: npx --yes prettier -c
-        language: system
-        files: '^(web|docs)/.*\.(js|jsx|ts|tsx|json|css|md|html)$'
-
   - repo: https://github.com/pre-commit/mirrors-eslint
     rev: v9.12.0
     hooks:
       - id: eslint
         files: ^web/
         types_or: [javascript, jsx, ts, tsx]
+        args: ["-c", "web/eslint.config.js"]
 
 ci:
   autoupdate_schedule: quarterly
