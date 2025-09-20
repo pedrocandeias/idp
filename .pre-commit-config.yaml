@@ -21,7 +21,7 @@ repos:
       - id: eslint
         files: ^web/
         types_or: [javascript, jsx, ts, tsx]
-        args: ["-c", "web/eslint.config.js"]
+        args: ["-c", "web/eslint.config.mjs"]
 
 ci:
   autoupdate_schedule: quarterly

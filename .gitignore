@@ -20,7 +20,7 @@ node_modules/
 web/node_modules/
 web/.pnpm-store/
 web/.npmrc
+.pre-commit-cache/
 
 # Docker
 .docker/
-

@@ -23,6 +23,10 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install
+
       - name: Install pre-commit
         run: pip install pre-commit
 
