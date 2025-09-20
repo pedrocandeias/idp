@@ -67,7 +67,7 @@ def setup_entities(client):
     )
     # Elevate role to allow rulepack creation
     user = db_session.query(models.User).filter(models.User.email == email).first()
-    user.roles = ["researcher"]
+    user.roles = ["researcher", "designer"]
     db_session.add(user)
     db_session.commit()
     tok = client.post(

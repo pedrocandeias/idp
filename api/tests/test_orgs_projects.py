@@ -41,6 +41,10 @@ def client(db_session, monkeypatch):
     import app.db as app_db
 
     app_db.SessionLocal = lambda: db_session
+    # Ensure audit middleware uses the same session
+    import app.middleware as app_mw
+
+    app_mw.SessionLocal = lambda: db_session
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

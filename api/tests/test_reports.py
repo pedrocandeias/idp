@@ -55,6 +55,10 @@ def client(db_session, monkeypatch):
     import app.db as app_db
 
     app_db.SessionLocal = lambda: db_session
+    # Ensure audit middleware uses the same session
+    import app.middleware as app_mw
+
+    app_mw.SessionLocal = lambda: db_session
 
     fake = FakeS3()
     monkeypatch.setattr(storage_mod, "get_s3_client", lambda: fake)
@@ -85,7 +89,7 @@ def auth_headers(client, db_session):
     )
     # Elevate role to allow rulepack creation during test
     u = db_session.query(models.User).filter(models.User.email == email).first()
-    u.roles = ["researcher"]
+    u.roles = ["researcher", "designer"]
     db_session.add(u)
     db_session.commit()
     tok = client.post(

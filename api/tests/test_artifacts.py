@@ -61,10 +61,18 @@ def client(db_session, monkeypatch):
     import app.db as app_db
 
     app_db.SessionLocal = lambda: db_session
+    # Ensure audit middleware uses the same session
+    import app.middleware as app_mw
+
+    app_mw.SessionLocal = lambda: db_session
 
     # Storage overrides
     fake = FakeS3()
     monkeypatch.setattr(storage_mod, "get_s3_client", lambda: fake)
+    # Also patch the symbol imported into the artifacts router
+    import app.routers.artifacts as artifacts_router
+
+    monkeypatch.setattr(artifacts_router, "get_s3_client", lambda: fake)
     monkeypatch.setattr(
         storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None
     )
