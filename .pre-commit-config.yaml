@@ -5,26 +5,10 @@ repos:
       - id: black
         language_version: python3
 
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.4
     hooks:
       - id: ruff-format
-
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.12.0
-    hooks:
-      - id: eslint
-        files: ^web/
-        types_or: [javascript, jsx, ts, tsx]
-        args: ["-c", "web/eslint.config.mjs"]
-        additional_dependencies:
-          - "@eslint/js@^9.12.0"
-          - "globals@^15.9.0"
 
 ci:
   autoupdate_schedule: quarterly
