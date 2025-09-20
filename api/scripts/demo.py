@@ -3,20 +3,20 @@ from __future__ import annotations
 
 import json
 import os
+
+# Ensure project root on path when executed as a file
+import sys
 import time
 from pathlib import Path
 
 import requests
 
-# Ensure project root on path when executed as a file
-import sys
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.db import SessionLocal
 from app import models
-
+from app.db import SessionLocal
 
 BASE = os.getenv("DEMO_BASE_URL", "http://localhost:8000")
 EMAIL = os.getenv("DEMO_EMAIL", "demo@example.com")
@@ -49,35 +49,67 @@ def main():
     wait_api()
 
     # Register/login
-    api("POST", "/auth/register", json={"email": EMAIL, "password": PASSWORD}).raise_for_status()
-    r = requests.post(f"{BASE}/auth/token", data={"username": EMAIL, "password": PASSWORD}, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=30)
+    api(
+        "POST", "/auth/register", json={"email": EMAIL, "password": PASSWORD}
+    ).raise_for_status()
+    r = requests.post(
+        f"{BASE}/auth/token",
+        data={"username": EMAIL, "password": PASSWORD},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
+    )
     r.raise_for_status()
     token = r.json()["access_token"]
 
     # Create project
-    proj = api("POST", "/api/v1/projects", token, json={"name": "Demo Project", "description": "Demo"}).json()
+    proj = api(
+        "POST",
+        "/api/v1/projects",
+        token,
+        json={"name": "Demo Project", "description": "Demo"},
+    ).json()
 
     # Create scenario directly in DB
     with SessionLocal() as db:
-        sc = models.SimulationScenario(project_id=proj["id"], name="Demo Scenario", config={
-            "distance_to_control_cm": 50,
-            "fg_rgb": [255, 255, 255],
-            "bg_rgb": [0, 0, 0],
-            "required_force_N": 15,
-            "capability_N": 20,
-        })
+        sc = models.SimulationScenario(
+            project_id=proj["id"],
+            name="Demo Scenario",
+            config={
+                "distance_to_control_cm": 50,
+                "fg_rgb": [255, 255, 255],
+                "bg_rgb": [0, 0, 0],
+                "required_force_N": 15,
+                "capability_N": 20,
+            },
+        )
         db.add(sc)
         db.commit()
         db.refresh(sc)
         scenario_id = sc.id
 
     # Create rulepack in DB (org-scoped)
-    with open(Path(__file__).resolve().parent.parent / "seeds" / "rulepack_general_eu_v1.json", "r") as f:
+    with open(
+        Path(__file__).resolve().parent.parent
+        / "seeds"
+        / "rulepack_general_eu_v1.json",
+        "r",
+    ) as f:
         rp_payload = json.load(f)
     with SessionLocal() as db:
-        existing = db.query(models.RulePack).filter(models.RulePack.name == rp_payload.get("name"), models.RulePack.org_id == proj["org_id"]).first()
+        existing = (
+            db.query(models.RulePack)
+            .filter(
+                models.RulePack.name == rp_payload.get("name"),
+                models.RulePack.org_id == proj["org_id"],
+            )
+            .first()
+        )
         if not existing:
-            rp_obj = models.RulePack(org_id=proj["org_id"], name=rp_payload.get("name"), rules=rp_payload.get("rules"))
+            rp_obj = models.RulePack(
+                org_id=proj["org_id"],
+                name=rp_payload.get("name"),
+                rules=rp_payload.get("rules"),
+            )
             setattr(rp_obj, "version", rp_payload.get("version", "1.0.0"))
             db.add(rp_obj)
             db.commit()
@@ -90,14 +122,32 @@ def main():
     gltf_path = Path(__file__).resolve().parent.parent / "seeds" / "minimal.gltf"
     files = {
         "file": ("minimal.gltf", gltf_path.read_bytes(), "model/gltf+json"),
-        "params": ("params.json", json.dumps({"demo": True}).encode("utf-8"), "application/json"),
+        "params": (
+            "params.json",
+            json.dumps({"demo": True}).encode("utf-8"),
+            "application/json",
+        ),
     }
-    up = requests.post(f"{BASE}/api/v1/projects/{proj['id']}/artifacts", files=files, headers={"Authorization": f"Bearer {token}"}, timeout=60)
+    up = requests.post(
+        f"{BASE}/api/v1/projects/{proj['id']}/artifacts",
+        files=files,
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=60,
+    )
     up.raise_for_status()
     art = up.json()
 
     # Enqueue evaluation
-    enq = api("POST", "/api/v1/evaluations", token, json={"artifact_id": art["id"], "scenario_id": scenario_id, "rulepack_id": rp_id}).json()
+    enq = api(
+        "POST",
+        "/api/v1/evaluations",
+        token,
+        json={
+            "artifact_id": art["id"],
+            "scenario_id": scenario_id,
+            "rulepack_id": rp_id,
+        },
+    ).json()
     run_id = enq["id"]
 
     # Wait for completion

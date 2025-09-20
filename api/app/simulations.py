@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Dict, Any
+from typing import Any, Dict, Tuple
 
 
 def contrast_ratio(l1: float, l2: float) -> float:
@@ -14,6 +14,7 @@ def wcag_contrast_from_rgb(fg: Tuple[int, int, int], bg: Tuple[int, int, int]) -
         def chan(u: int) -> float:
             x = u / 255.0
             return x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4
+
         r, g, b = c
         return 0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b)
 
@@ -30,7 +31,9 @@ def strength_feasible(required_force_N: float, capability_N: float) -> bool:
     return capability_N >= required_force_N
 
 
-def inclusivity_index(reach_ok: bool, strength_ok: bool, visual_ok: bool) -> Dict[str, Any]:
+def inclusivity_index(
+    reach_ok: bool, strength_ok: bool, visual_ok: bool
+) -> Dict[str, Any]:
     # Weighted aggregate: reach 0.4, strength 0.3, visual 0.3
     weights = {"reach": 0.4, "strength": 0.3, "visual": 0.3}
     score = (
@@ -38,5 +41,8 @@ def inclusivity_index(reach_ok: bool, strength_ok: bool, visual_ok: bool) -> Dic
         + (1.0 if strength_ok else 0.0) * weights["strength"]
         + (1.0 if visual_ok else 0.0) * weights["visual"]
     )
-    return {"score": score, "weights": weights, "components": {"reach": reach_ok, "strength": strength_ok, "visual": visual_ok}}
-
+    return {
+        "score": score,
+        "weights": weights,
+        "components": {"reach": reach_ok, "strength": strength_ok, "visual": visual_ok},
+    }

@@ -6,9 +6,9 @@ from .panel import show_panel
 class IdpCmd:
     def GetResources(self):  # pragma: no cover
         return {
-            'Pixmap': '',
-            'MenuText': 'IDP Export & Upload',
-            'ToolTip': 'Export current document to STEP and upload to IDP',
+            "Pixmap": "",
+            "MenuText": "IDP Export & Upload",
+            "ToolTip": "Export current document to STEP and upload to IDP",
         }
 
     def IsActive(self):  # pragma: no cover
@@ -18,7 +18,8 @@ class IdpCmd:
         show_panel()
 
 
-FreeCADGui.addCommand('IDP_ExportUpload', IdpCmd())
+FreeCADGui.addCommand("IDP_ExportUpload", IdpCmd())
+
 
 def Initialize():  # pragma: no cover
     m = FreeCADGui.getMainWindow().menuBar()
@@ -27,4 +28,3 @@ def Initialize():  # pragma: no cover
         mw.addToolBar("IDP")
     except Exception:
         pass
-

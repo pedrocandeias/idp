@@ -1,13 +1,11 @@
 import pytest
+from app import models
+from app import storage as storage_mod
+from app.db import Base, get_db
+from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.db import Base, get_db
-from app import models
-from app import storage as storage_mod
-
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
@@ -15,15 +13,21 @@ SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 class FakeS3:
     def __init__(self):
         self.objects = {}
+
     def put_object(self, Bucket, Key, Body, ContentType=None):
-        self.objects[(Bucket, Key)] = Body if isinstance(Body, (bytes, bytearray)) else Body.read()
+        self.objects[(Bucket, Key)] = (
+            Body if isinstance(Body, (bytes, bytearray)) else Body.read()
+        )
+
     def generate_presigned_url(self, op, Params, ExpiresIn):
         return f"https://example.com/{Params['Bucket']}/{Params['Key']}"
 
 
 @pytest.fixture(scope="function")
 def db_session():
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
@@ -40,14 +44,19 @@ def client(db_session, monkeypatch):
             yield db_session
         finally:
             pass
+
     app.dependency_overrides[get_db] = override_get_db
     import app.db as app_db
+
     app_db.SessionLocal = lambda: db_session
 
     fake = FakeS3()
     monkeypatch.setattr(storage_mod, "get_s3_client", lambda: fake)
-    monkeypatch.setattr(storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None)
+    monkeypatch.setattr(
+        storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None
+    )
     from app.config import settings
+
     settings.s3_bucket = "test-bkt"
 
     with TestClient(app) as c:
@@ -57,12 +66,22 @@ def client(db_session, monkeypatch):
 
 def auth_headers(client, db_session):
     from app import models
+
     org = models.Org(name="orgR")
-    db_session.add(org); db_session.commit(); db_session.refresh(org)
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
     org_id = org.id
-    email = "r@example.com"; pw = "secret123"
-    client.post("/auth/register", json={"email": email, "password": pw, "org_id": org_id})
-    tok = client.post("/auth/token", data={"username": email, "password": pw}, headers={"Content-Type": "application/x-www-form-urlencoded"}).json()["access_token"]
+    email = "r@example.com"
+    pw = "secret123"
+    client.post(
+        "/auth/register", json={"email": email, "password": pw, "org_id": org_id}
+    )
+    tok = client.post(
+        "/auth/token",
+        data={"username": email, "password": pw},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    ).json()["access_token"]
     return {"Authorization": f"Bearer {tok}"}
 
 
@@ -70,15 +89,28 @@ def ready_evaluation(client, db_session):
     headers = auth_headers(client, db_session)
     proj = client.post("/api/v1/projects", json={"name": "P"}, headers=headers).json()
     sc = models.SimulationScenario(project_id=proj["id"], name="S", config={})
-    db_session.add(sc); db_session.commit(); db_session.refresh(sc)
+    db_session.add(sc)
+    db_session.commit()
+    db_session.refresh(sc)
     art = models.DesignArtifact(project_id=proj["id"], name="A", type="gltf")
-    db_session.add(art); db_session.commit(); db_session.refresh(art)
+    db_session.add(art)
+    db_session.commit()
+    db_session.refresh(art)
     # minimal rulepack
-    rp = client.post("/api/v1/rulepacks", json={"name":"RP","version":"1.0.0","rules":{"rules":[]}}, headers=headers).json()
+    rp = client.post(
+        "/api/v1/rulepacks",
+        json={"name": "RP", "version": "1.0.0", "rules": {"rules": []}},
+        headers=headers,
+    ).json()
     # enqueue and force eager
     from app.celery_app import celery_app
+
     celery_app.conf.task_always_eager = True
-    enq = client.post("/api/v1/evaluations", json={"artifact_id": art.id, "scenario_id": sc.id, "rulepack_id": rp["id"]}, headers=headers)
+    enq = client.post(
+        "/api/v1/evaluations",
+        json={"artifact_id": art.id, "scenario_id": sc.id, "rulepack_id": rp["id"]},
+        headers=headers,
+    )
     eid = enq.json()["id"]
     # Now run is done
     return headers, eid

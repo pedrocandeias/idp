@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 import os
+from logging.config import fileConfig
 
-from app.db import Base
+from alembic import context
 from app import models  # noqa: F401 - ensure models are imported for metadata
 from app.config import settings
+from app.db import Base
+from sqlalchemy import engine_from_config, pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -58,4 +58,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

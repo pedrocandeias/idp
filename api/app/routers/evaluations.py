@@ -3,21 +3,22 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_current_user
-from ..db import get_db
 from .. import models
-from ..tasks import run_evaluation
-from ..reporting import render_html, render_pdf, sha256_bytes
-from ..storage import upload_bytes, presigned_get, get_s3_client
 from ..config import settings
+from ..db import get_db
+from ..dependencies import get_current_user
 from ..rbac import require_role
-
+from ..reporting import render_html, render_pdf, sha256_bytes
+from ..storage import get_s3_client, presigned_get, upload_bytes
+from ..tasks import run_evaluation
 
 router = APIRouter(prefix="/api/v1/evaluations", tags=["evaluations"])
 
 
 @router.post("", status_code=202)
-def enqueue_evaluation(payload: dict, current=Depends(get_current_user), db: Session = Depends(get_db)):
+def enqueue_evaluation(
+    payload: dict, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
     artifact_id = int(payload.get("artifact_id"))
     scenario_id = int(payload.get("scenario_id"))
     rulepack_id = int(payload.get("rulepack_id"))
@@ -36,7 +37,16 @@ def enqueue_evaluation(payload: dict, current=Depends(get_current_user), db: Ses
             raise HTTPException(status_code=403, detail="Forbidden")
 
     require_role(current, ["org_admin", "researcher", "designer"])  # can submit eval
-    run = models.EvaluationRun(scenario_id=scenario_id, status="queued", metrics={"artifact_id": artifact_id, "rulepack_id": rulepack_id, "webhook_url": webhook_url, "scenario_id": scenario_id})
+    run = models.EvaluationRun(
+        scenario_id=scenario_id,
+        status="queued",
+        metrics={
+            "artifact_id": artifact_id,
+            "rulepack_id": rulepack_id,
+            "webhook_url": webhook_url,
+            "scenario_id": scenario_id,
+        },
+    )
     db.add(run)
     db.commit()
     db.refresh(run)
@@ -46,14 +56,18 @@ def enqueue_evaluation(payload: dict, current=Depends(get_current_user), db: Ses
 
 
 @router.get("/{evaluation_id}")
-def get_evaluation(evaluation_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)):
+def get_evaluation(
+    evaluation_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
     run = db.get(models.EvaluationRun, evaluation_id)
     if not run:
         raise HTTPException(status_code=404, detail="Not found")
     # scope
     scen = db.get(models.SimulationScenario, run.scenario_id)
     proj = db.get(models.Project, scen.project_id) if scen else None
-    if "superadmin" not in (current.roles or []) and (not proj or proj.org_id != current.org_id):
+    if "superadmin" not in (current.roles or []) and (
+        not proj or proj.org_id != current.org_id
+    ):
         raise HTTPException(status_code=403, detail="Forbidden")
     return {
         "id": run.id,
@@ -65,7 +79,9 @@ def get_evaluation(evaluation_id: int, current=Depends(get_current_user), db: Se
 
 
 @router.post("/{evaluation_id}/report")
-def create_report(evaluation_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)):
+def create_report(
+    evaluation_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
     run = db.get(models.EvaluationRun, evaluation_id)
     if not run or run.status != "done":
         raise HTTPException(status_code=400, detail="Evaluation not ready")
@@ -74,16 +90,27 @@ def create_report(evaluation_id: int, current=Depends(get_current_user), db: Ses
     project = db.get(models.Project, scenario.project_id) if scenario else None
     # find artifact and rulepack ids from metrics
     m = run.metrics or {}
-    artifact = db.get(models.DesignArtifact, m.get("artifact_id")) if m.get("artifact_id") else None
-    rulepack = db.get(models.RulePack, m.get("rulepack_id")) if m.get("rulepack_id") else None
+    artifact = (
+        db.get(models.DesignArtifact, m.get("artifact_id"))
+        if m.get("artifact_id")
+        else None
+    )
+    rulepack = (
+        db.get(models.RulePack, m.get("rulepack_id")) if m.get("rulepack_id") else None
+    )
 
     # authorize org scope
-    if "superadmin" not in (current.roles or []) and (not project or project.org_id != current.org_id):
+    if "superadmin" not in (current.roles or []) and (
+        not project or project.org_id != current.org_id
+    ):
         raise HTTPException(status_code=403, detail="Forbidden")
     # previous run delta
     prev = (
         db.query(models.EvaluationRun)
-        .filter(models.EvaluationRun.scenario_id == run.scenario_id, models.EvaluationRun.id < run.id)
+        .filter(
+            models.EvaluationRun.scenario_id == run.scenario_id,
+            models.EvaluationRun.id < run.id,
+        )
         .order_by(models.EvaluationRun.id.desc())
         .first()
     )
@@ -103,7 +130,11 @@ def create_report(evaluation_id: int, current=Depends(get_current_user), db: Ses
         "artifact": artifact,
         "rulepack": rulepack,
         "results": run.results_json or {"rules": []},
-        "index": run.inclusivity_index_json or {"score": 0, "components": {"reach": False, "strength": False, "visual": False}},
+        "index": run.inclusivity_index_json
+        or {
+            "score": 0,
+            "components": {"reach": False, "strength": False, "visual": False},
+        },
         "delta": delta,
         "date": run.completed_at.isoformat() if run.completed_at else "",
         "checksum": "",
@@ -127,8 +158,12 @@ def create_report(evaluation_id: int, current=Depends(get_current_user), db: Ses
     upload_bytes(pdf_key, pdf, "application/pdf", client=client)
 
     report = models.Report(
-        project_id=project.id, title=f"Evaluation Report #{run.id}", content=None,
-        html_key=html_key, pdf_key=pdf_key, checksum_sha256=checksum
+        project_id=project.id,
+        title=f"Evaluation Report #{run.id}",
+        content=None,
+        html_key=html_key,
+        pdf_key=pdf_key,
+        checksum_sha256=checksum,
     )
     db.add(report)
     db.commit()

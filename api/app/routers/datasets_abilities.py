@@ -3,12 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_current_user
-from ..db import get_db
 from .. import models
-from ..schemas import AbilityProfileRead, AbilityProfileCreate
+from ..db import get_db
+from ..dependencies import get_current_user
 from ..rbac import require_role
-
+from ..schemas import AbilityProfileCreate, AbilityProfileRead
 
 router = APIRouter(prefix="/api/v1/datasets/abilities", tags=["datasets:abilities"])
 
@@ -24,7 +23,11 @@ def list_abilities(current=Depends(get_current_user), db: Session = Depends(get_
 
 
 @router.post("", response_model=AbilityProfileRead, status_code=201)
-def create_ability(payload: AbilityProfileCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
+def create_ability(
+    payload: AbilityProfileCreate,
+    current=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if not current.org_id:
         raise HTTPException(status_code=400, detail="User not in an organization")
     require_role(current, ["org_admin", "researcher"])  # abilities create

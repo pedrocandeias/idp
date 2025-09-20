@@ -1,19 +1,20 @@
 import json
+
 import pytest
+from app.db import Base, get_db
+from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.db import Base, get_db
-
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
 @pytest.fixture(scope="function")
 def db_session():
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
@@ -30,8 +31,10 @@ def client(db_session, monkeypatch):
             yield db_session
         finally:
             pass
+
     app.dependency_overrides[get_db] = override_get_db
     import app.db as app_db
+
     app_db.SessionLocal = lambda: db_session
     with TestClient(app) as c:
         yield c
@@ -40,13 +43,18 @@ def client(db_session, monkeypatch):
 
 def get_auth_headers(client, db_session):
     from app import models
+
     org = models.Org(name="orgD")
-    db_session.add(org); db_session.commit(); db_session.refresh(org)
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
     org_id = org.id
     # Register user
     email = "d@example.com"
     password = "secret123"
-    r = client.post("/auth/register", json={"email": email, "password": password, "org_id": org_id})
+    r = client.post(
+        "/auth/register", json={"email": email, "password": password, "org_id": org_id}
+    )
     assert r.status_code == 201
     # Login
     r = client.post(
@@ -67,9 +75,14 @@ def test_anthro_percentiles(client):
         "schema": {"units": {"stature": "cm"}},
         "distributions": {
             "stature": [
-                {"region": "NA", "sex": "M", "age": "18-25", "percentiles": {"p5": 165.0, "p50": 177.0, "p95": 190.0}}
+                {
+                    "region": "NA",
+                    "sex": "M",
+                    "age": "18-25",
+                    "percentiles": {"p5": 165.0, "p50": 177.0, "p95": 190.0},
+                }
             ]
-        }
+        },
     }
     r = client.post("/api/v1/datasets/anthropometrics", json=ds, headers=headers)
     assert r.status_code == 201, r.text
@@ -78,7 +91,13 @@ def test_anthro_percentiles(client):
     for p, expected in [(5, 165.0), (50, 177.0), (95, 190.0)]:
         r = client.get(
             f"/api/v1/datasets/anthropometrics/{dataset['id']}/percentile",
-            params={"metric": "stature", "percentile": p, "region": "NA", "sex": "M", "age": "18-25"},
+            params={
+                "metric": "stature",
+                "percentile": p,
+                "region": "NA",
+                "sex": "M",
+                "age": "18-25",
+            },
             headers=headers,
         )
         assert r.status_code == 200, r.text

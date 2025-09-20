@@ -1,2 +1,11 @@
 # Package marker
-from . import auth, health, organizations, projects, artifacts, datasets_anthro, datasets_abilities, rulepacks
+from . import (
+    artifacts,
+    auth,
+    datasets_abilities,
+    datasets_anthro,
+    health,
+    organizations,
+    projects,
+    rulepacks,
+)

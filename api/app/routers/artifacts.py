@@ -4,17 +4,22 @@ import json
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_current_user
-from ..db import get_db
 from .. import models
-from ..schemas import DesignArtifactRead
-from ..storage import upload_bytes, presigned_get, presigned_put, new_object_key, get_s3_client
 from ..config import settings
+from ..db import get_db
+from ..dependencies import get_current_user
 from ..rbac import require_role
-
+from ..schemas import DesignArtifactRead
+from ..storage import (
+    get_s3_client,
+    new_object_key,
+    presigned_get,
+    presigned_put,
+    upload_bytes,
+)
 
 router = APIRouter(prefix="/api/v1/projects/{project_id}/artifacts", tags=["artifacts"])
 

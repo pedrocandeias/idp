@@ -4,7 +4,7 @@ import hashlib
 from datetime import datetime
 from typing import Tuple
 
-from jinja2 import Environment, BaseLoader
+from jinja2 import BaseLoader, Environment
 
 try:
     from weasyprint import HTML  # type: ignore
@@ -89,4 +89,3 @@ def render_pdf(html: str) -> bytes:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
-

@@ -5,9 +5,9 @@ Revises: 000007
 Create Date: 2025-09-18 02:30:00
 
 """
-from alembic import op
-import sqlalchemy as sa
 
+import sqlalchemy as sa
+from alembic import op
 
 revision = "000008"
 down_revision = "000007"
@@ -23,4 +23,3 @@ def upgrade() -> None:
 def downgrade() -> None:
     with op.batch_alter_table("audit_events") as batch_op:
         batch_op.alter_column("org_id", existing_type=sa.Integer(), nullable=False)
-

@@ -1,18 +1,18 @@
 import pytest
+from app.db import Base, get_db
+from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.db import Base, get_db
-
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
 @pytest.fixture(scope="function")
 def db_session():
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
@@ -33,6 +33,7 @@ def client(db_session, monkeypatch):
     app.dependency_overrides[get_db] = override_get_db
     # Make middleware use test session
     import app.db as app_db
+
     app_db.SessionLocal = lambda: db_session
     with TestClient(app) as c:
         yield c
@@ -42,6 +43,7 @@ def client(db_session, monkeypatch):
 def test_create_org_register_login_create_project_flow(client, db_session):
     # Create organization directly
     from app import models
+
     org = models.Org(name="org1")
     db_session.add(org)
     db_session.commit()
@@ -51,7 +53,9 @@ def test_create_org_register_login_create_project_flow(client, db_session):
     # Register user in the org
     email = "user@example.com"
     password = "secret123"
-    r = client.post("/auth/register", json={"email": email, "password": password, "org_id": org_id})
+    r = client.post(
+        "/auth/register", json={"email": email, "password": password, "org_id": org_id}
+    )
     assert r.status_code == 201, r.text
 
     # Login to get token
@@ -65,7 +69,11 @@ def test_create_org_register_login_create_project_flow(client, db_session):
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create a project in the user's org
-    r = client.post("/api/v1/projects", json={"name": "proj1", "description": "test"}, headers=headers)
+    r = client.post(
+        "/api/v1/projects",
+        json={"name": "proj1", "description": "test"},
+        headers=headers,
+    )
     assert r.status_code == 201, r.text
     proj = r.json()
     assert proj["name"] == "proj1"

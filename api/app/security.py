@@ -1,8 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from passlib.context import CryptContext
-import jwt
-from .config import settings
 
+import jwt
+from passlib.context import CryptContext
+
+from .config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -22,4 +23,3 @@ def create_access_token(subject: str, expires_minutes: int | None = None) -> str
     payload = {"sub": subject, "exp": expire}
     token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
     return token
-

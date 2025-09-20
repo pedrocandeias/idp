@@ -4,11 +4,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sqlalchemy.orm import Session
-
+from app import models
 from app.config import settings
 from app.db import SessionLocal, engine
-from app import models
+from sqlalchemy.orm import Session
 
 
 def ensure_default_org(db: Session) -> models.Org:
@@ -32,9 +31,11 @@ def seed():
         # Anthropometrics
         if anthro_path.exists():
             data = json.loads(anthro_path.read_text())
-            existing = db.query(models.AnthropometricDataset).filter(
-                models.AnthropometricDataset.name == data.get("name")
-            ).first()
+            existing = (
+                db.query(models.AnthropometricDataset)
+                .filter(models.AnthropometricDataset.name == data.get("name"))
+                .first()
+            )
             if not existing:
                 item = models.AnthropometricDataset(
                     org_id=org.id,
@@ -49,9 +50,11 @@ def seed():
         # Abilities
         if abil_path.exists():
             data = json.loads(abil_path.read_text())
-            existing = db.query(models.AbilityProfile).filter(
-                models.AbilityProfile.name == data.get("name")
-            ).first()
+            existing = (
+                db.query(models.AbilityProfile)
+                .filter(models.AbilityProfile.name == data.get("name"))
+                .first()
+            )
             if not existing:
                 item = models.AbilityProfile(
                     org_id=org.id,

@@ -4,13 +4,12 @@ import json
 from datetime import datetime, timezone
 from typing import Callable
 
+import jwt
 from fastapi import Request
 
-import jwt
-
+from . import models
 from .config import settings
 from .db import SessionLocal
-from . import models
 
 
 async def audit_middleware(request: Request, call_next: Callable):
@@ -21,13 +20,16 @@ async def audit_middleware(request: Request, call_next: Callable):
     if auth and auth.lower().startswith("bearer "):
         token = auth.split(" ", 1)[1]
         try:
-            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+            payload = jwt.decode(
+                token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+            )
             user_id = int(payload.get("sub"))
         except Exception:
             user_id = None
     body_bytes = b""
     try:
         body_bytes = await request.body()
+
         # re-inject body so downstream can read it
         async def _receive():  # type: ignore
             return {"type": "http.request", "body": body_bytes, "more_body": False}

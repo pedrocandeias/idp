@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any, List, Optional, Tuple
 
 
@@ -18,7 +18,9 @@ class Control:
 def _boundbox_from_objects(objs: List[Any]) -> Optional[dict]:
     # Try FreeCAD-style BoundBox if available
     for o in objs:
-        bb = getattr(getattr(o, "Shape", None), "BoundBox", None) or getattr(o, "BoundBox", None)
+        bb = getattr(getattr(o, "Shape", None), "BoundBox", None) or getattr(
+            o, "BoundBox", None
+        )
         if bb is not None:
             return {
                 "xlen": float(getattr(bb, "XLength", 0.0)),
@@ -42,7 +44,11 @@ def _controls_from_objects(objs: List[Any]) -> List[Control]:
         if plc is not None:
             base = getattr(plc, "Base", None)
             if base is not None:
-                pos = (float(getattr(base, "x", 0.0)), float(getattr(base, "y", 0.0)), float(getattr(base, "z", 0.0)))
+                pos = (
+                    float(getattr(base, "x", 0.0)),
+                    float(getattr(base, "y", 0.0)),
+                    float(getattr(base, "z", 0.0)),
+                )
         ctype = "generic"
         if "KNOB" in str(name).upper():
             ctype = "knob"
@@ -66,4 +72,3 @@ def serialize_document(doc: Any) -> dict:
         "controls": controls,
         "meta": {"count": len(objs)},
     }
-

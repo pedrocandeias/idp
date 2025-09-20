@@ -1,17 +1,15 @@
-from io import BytesIO
 import json
 import types
+from io import BytesIO
 
 import pytest
+from app import models
+from app import storage as storage_mod
+from app.db import Base, get_db
+from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.db import Base, get_db
-from app import models
-from app import storage as storage_mod
-
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
@@ -32,7 +30,9 @@ class FakeS3:
 
 @pytest.fixture(scope="function")
 def db_session():
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
@@ -50,16 +50,21 @@ def client(db_session, monkeypatch):
             yield db_session
         finally:
             pass
+
     app.dependency_overrides[get_db] = override_get_db
     import app.db as app_db
+
     app_db.SessionLocal = lambda: db_session
 
     # Storage overrides
     fake = FakeS3()
     monkeypatch.setattr(storage_mod, "get_s3_client", lambda: fake)
-    monkeypatch.setattr(storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None)
+    monkeypatch.setattr(
+        storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None
+    )
     # Settings
     from app.config import settings
+
     settings.s3_bucket = "test-bucket"
 
     with TestClient(app) as c:
@@ -69,12 +74,18 @@ def client(db_session, monkeypatch):
 
 def auth_headers(client, db_session):
     from app import models
+
     org = models.Org(name="orgX")
-    db_session.add(org); db_session.commit(); db_session.refresh(org)
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
     # Register user
     email = "u@example.com"
     password = "secret123"
-    r = client.post("/auth/register", json={"email": email, "password": password, "org_id": org["id"]})
+    r = client.post(
+        "/auth/register",
+        json={"email": email, "password": password, "org_id": org["id"]},
+    )
     assert r.status_code == 201
     # Login
     r = client.post(
@@ -97,10 +108,19 @@ def test_upload_artifact_flow(client, db_session):
     # Upload artifact (multipart)
     files = {
         "file": ("model.glb", b"abcdefg", "model/gltf-binary"),
-        "params": ("params.json", json.dumps({"a":1}).encode("utf-8"), "application/json"),
+        "params": (
+            "params.json",
+            json.dumps({"a": 1}).encode("utf-8"),
+            "application/json",
+        ),
     }
     data = {"name": "My Model", "type": "gltf"}
-    r = client.post(f"/api/v1/projects/{project['id']}/artifacts", files=files, data=data, headers=headers)
+    r = client.post(
+        f"/api/v1/projects/{project['id']}/artifacts",
+        files=files,
+        data=data,
+        headers=headers,
+    )
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["id"] > 0

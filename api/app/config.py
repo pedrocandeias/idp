@@ -1,6 +1,7 @@
-from pydantic_settings import BaseSettings
-from pydantic import Field
 import os
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -16,7 +17,9 @@ class Settings(BaseSettings):
 
     jwt_secret: str = Field(default="change-this-in-prod", alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    access_token_expire_minutes: int = Field(default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    access_token_expire_minutes: int = Field(
+        default=60, alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
 
     # S3 / MinIO
     s3_endpoint_url: str = Field(default="http://minio:9000", alias="S3_ENDPOINT_URL")
@@ -26,7 +29,9 @@ class Settings(BaseSettings):
     s3_bucket: str = Field(default="idp", alias="S3_BUCKET")
     s3_use_ssl: bool = Field(default=False, alias="S3_USE_SSL")
 
-    download_url_expire_seconds: int = Field(default=3600, alias="DOWNLOAD_URL_EXPIRE_SECONDS")
+    download_url_expire_seconds: int = Field(
+        default=3600, alias="DOWNLOAD_URL_EXPIRE_SECONDS"
+    )
     max_upload_mb: int = Field(default=50, alias="MAX_UPLOAD_MB")
 
     class Config:

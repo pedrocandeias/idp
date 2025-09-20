@@ -3,15 +3,16 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from ..dependencies import get_current_user
-from ..db import get_db
 from .. import models
+from ..db import get_db
+from ..dependencies import get_current_user
+from ..rbac import require_role
 from ..schemas import AnthropometricDatasetCreate, AnthropometricDatasetRead
 from ..services.datasets import query_percentile
-from ..rbac import require_role
 
-
-router = APIRouter(prefix="/api/v1/datasets/anthropometrics", tags=["datasets:anthropometrics"])
+router = APIRouter(
+    prefix="/api/v1/datasets/anthropometrics", tags=["datasets:anthropometrics"]
+)
 
 
 @router.get("", response_model=list[AnthropometricDatasetRead])
@@ -25,7 +26,11 @@ def list_anthro(current=Depends(get_current_user), db: Session = Depends(get_db)
 
 
 @router.post("", response_model=AnthropometricDatasetRead, status_code=201)
-def create_anthro(payload: AnthropometricDatasetCreate, current=Depends(get_current_user), db: Session = Depends(get_db)):
+def create_anthro(
+    payload: AnthropometricDatasetCreate,
+    current=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     if not current.org_id:
         raise HTTPException(status_code=400, detail="User not in an organization")
     require_role(current, ["org_admin", "researcher"])  # dataset create
@@ -61,7 +66,9 @@ def get_percentile(
     if not ds.distributions:
         raise HTTPException(status_code=400, detail="Dataset has no distributions")
     try:
-        value = query_percentile(ds.distributions, metric, percentile, region=region, sex=sex, age=age)
+        value = query_percentile(
+            ds.distributions, metric, percentile, region=region, sex=sex, age=age
+        )
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"metric": metric, "percentile": percentile, "value": value}

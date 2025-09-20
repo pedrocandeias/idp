@@ -31,18 +31,33 @@ def ensure_bucket_exists(client=None, bucket: Optional[str] = None):
         # Create bucket (MinIO ignores LocationConstraint for us-east-1)
         params = {"Bucket": bucket}
         if settings.s3_region and settings.s3_region != "us-east-1":
-            params["CreateBucketConfiguration"] = {"LocationConstraint": settings.s3_region}
+            params["CreateBucketConfiguration"] = {
+                "LocationConstraint": settings.s3_region
+            }
         client.create_bucket(**params)
 
 
-def upload_bytes(key: str, data: bytes, content_type: str | None = None, client=None, bucket: Optional[str] = None):
+def upload_bytes(
+    key: str,
+    data: bytes,
+    content_type: str | None = None,
+    client=None,
+    bucket: Optional[str] = None,
+):
     client = client or get_s3_client()
     bucket = bucket or settings.s3_bucket
     ensure_bucket_exists(client, bucket)
-    client.put_object(Bucket=bucket, Key=key, Body=data, ContentType=content_type or "application/octet-stream")
+    client.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=data,
+        ContentType=content_type or "application/octet-stream",
+    )
 
 
-def presigned_get(key: str, expires: Optional[int] = None, client=None, bucket: Optional[str] = None) -> str:
+def presigned_get(
+    key: str, expires: Optional[int] = None, client=None, bucket: Optional[str] = None
+) -> str:
     client = client or get_s3_client()
     bucket = bucket or settings.s3_bucket
     return client.generate_presigned_url(
@@ -52,7 +67,13 @@ def presigned_get(key: str, expires: Optional[int] = None, client=None, bucket: 
     )
 
 
-def presigned_put(key: str, content_type: str | None = None, expires: Optional[int] = None, client=None, bucket: Optional[str] = None) -> str:
+def presigned_put(
+    key: str,
+    content_type: str | None = None,
+    expires: Optional[int] = None,
+    client=None,
+    bucket: Optional[str] = None,
+) -> str:
     client = client or get_s3_client()
     bucket = bucket or settings.s3_bucket
     params = {"Bucket": bucket, "Key": key}
@@ -70,4 +91,3 @@ def new_object_key(project_id: int, filename: str) -> str:
     if "." in filename:
         ext = filename.rsplit(".", 1)[1].lower()
     return f"projects/{project_id}/artifacts/{uuid.uuid4().hex}{('.' + ext) if ext else ''}"
-

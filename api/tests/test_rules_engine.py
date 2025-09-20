@@ -1,12 +1,16 @@
 import pytest
-
-from app.rules import evaluate_condition, evaluate_rule, UnsafeExpression
+from app.rules import UnsafeExpression, evaluate_condition, evaluate_rule
 
 
 def test_evaluator_basic_arithmetic_and_logic():
     assert evaluate_condition("1 + 2 * 3 == 7", {}) is True
     assert evaluate_condition("not (1 > 2)", {}) is True
-    assert evaluate_condition("(a + b) >= min_v and flag", {"a": 5, "b": 3, "min_v": 8, "flag": True}) is True
+    assert (
+        evaluate_condition(
+            "(a + b) >= min_v and flag", {"a": 5, "b": 3, "min_v": 8, "flag": True}
+        )
+        is True
+    )
 
 
 def test_evaluator_blocks_unsafe():
@@ -57,5 +61,6 @@ def test_rule_torque_limit_with_threshold_input():
         "remediation": "Reduce torque or increase diameter.",
     }
     assert evaluate_rule(rule, {"torque_Nm": 0.2, "max_torque_Nm": 0.25}).passed is True
-    assert evaluate_rule(rule, {"torque_Nm": 0.3, "max_torque_Nm": 0.25}).passed is False
-
+    assert (
+        evaluate_rule(rule, {"torque_Nm": 0.3, "max_torque_Nm": 0.25}).passed is False
+    )

@@ -1,8 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .middleware import audit_middleware
-from .routers import health, auth, organizations, projects, artifacts, datasets_anthro, datasets_abilities, rulepacks, evaluations
 
+from .middleware import audit_middleware
+from .routers import (
+    artifacts,
+    auth,
+    datasets_abilities,
+    datasets_anthro,
+    evaluations,
+    health,
+    organizations,
+    projects,
+    rulepacks,
+)
 
 app = FastAPI(title="IDP API")
 

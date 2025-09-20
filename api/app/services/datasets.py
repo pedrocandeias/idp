@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Dict, Any
-
+from typing import Any, Dict, Optional
 
 """
 distributions_json structure:
@@ -29,7 +28,12 @@ Percentile interpolation:
 """
 
 
-def _choose_segment(entries: list[dict[str, Any]], region: Optional[str], sex: Optional[str], age: Optional[str]) -> Optional[dict[str, Any]]:
+def _choose_segment(
+    entries: list[dict[str, Any]],
+    region: Optional[str],
+    sex: Optional[str],
+    age: Optional[str],
+) -> Optional[dict[str, Any]]:
     # Score-based best match. Exact match scores highest; 'all' acts as wildcard.
     best = None
     best_score = -1
@@ -67,7 +71,15 @@ def interpolate_percentile(p5: float, p50: float, p95: float, p: float) -> float
         return p50 + t * (p95 - p50)
 
 
-def query_percentile(distributions: Dict[str, list[dict]], metric: str, percentile: float, *, region: Optional[str] = None, sex: Optional[str] = None, age: Optional[str] = None) -> float:
+def query_percentile(
+    distributions: Dict[str, list[dict]],
+    metric: str,
+    percentile: float,
+    *,
+    region: Optional[str] = None,
+    sex: Optional[str] = None,
+    age: Optional[str] = None,
+) -> float:
     entries = distributions.get(metric) or []
     if not entries:
         raise KeyError(f"Metric not found: {metric}")

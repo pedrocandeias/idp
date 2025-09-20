@@ -16,9 +16,8 @@ except Exception:  # pragma: no cover
 
 from PySide2 import QtCore, QtWidgets
 
-from .serializer import serialize_document
 from .api_client import ApiClient
-
+from .serializer import serialize_document
 
 ORG = "IDP"
 APP = "FreeCADAddon"
@@ -101,7 +100,9 @@ class IdpPanel(QtWidgets.QWidget):
 
             params = serialize_document(doc)
             tmpdir = tempfile.gettempdir()
-            name = self.name.text().strip() or (getattr(doc, "Label", None) or "artifact")
+            name = self.name.text().strip() or (
+                getattr(doc, "Label", None) or "artifact"
+            )
             steppath = os.path.join(tmpdir, f"{name}.step")
             self._export_step(doc, steppath)
 
@@ -123,4 +124,3 @@ def show_panel():  # pragma: no cover - UI
     else:
         w.show()
     return w
-

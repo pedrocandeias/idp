@@ -1,5 +1,6 @@
+from typing import Any, List, Optional
+
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List, Any
 
 
 class HealthResponse(BaseModel):

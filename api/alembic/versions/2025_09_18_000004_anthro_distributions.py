@@ -5,9 +5,9 @@ Revises: 000003
 Create Date: 2025-09-18 01:00:00
 
 """
-from alembic import op
-import sqlalchemy as sa
 
+import sqlalchemy as sa
+from alembic import op
 
 revision = "000004"
 down_revision = "000003"
@@ -24,4 +24,3 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("anthropometric_datasets", "distributions")
-

@@ -4,7 +4,6 @@ import ast
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-
 ALLOWED_BINOPS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Mod, ast.Pow)
 ALLOWED_CMPOPS = (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE)
 ALLOWED_BOOLOPS = (ast.And, ast.Or)
@@ -51,7 +50,7 @@ def _eval_node(node: ast.AST, vars: Mapping[str, Any]) -> Any:
         if isinstance(node.op, ast.Mod):
             return left % right
         if isinstance(node.op, ast.Pow):
-            return left ** right
+            return left**right
     if isinstance(node, ast.BoolOp) and isinstance(node.op, ALLOWED_BOOLOPS):
         values = [_eval_node(v, vars) for v in node.values]
         if isinstance(node.op, ast.And):
@@ -87,18 +86,49 @@ def _eval_node(node: ast.AST, vars: Mapping[str, Any]) -> Any:
                 return False
             left = right
         return True
-    raise UnsafeExpression(f"Disallowed expression: {ast.dump(node, include_attributes=False)}")
+    raise UnsafeExpression(
+        f"Disallowed expression: {ast.dump(node, include_attributes=False)}"
+    )
 
 
 def evaluate_condition(expr: str, variables: Mapping[str, Any]) -> bool:
     tree = ast.parse(expr, mode="eval")
     # Ensure no dangerous nodes present
     for n in ast.walk(tree):
-        if isinstance(n, (ast.Call, ast.Attribute, ast.Subscript, ast.Dict, ast.List, ast.Tuple,
-                          ast.Lambda, ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp,
-                          ast.Import, ast.ImportFrom, ast.Assign, ast.AugAssign, ast.While, ast.For,
-                          ast.With, ast.If, ast.FunctionDef, ast.ClassDef, ast.Delete, ast.Yield,
-                          ast.YieldFrom, ast.Global, ast.Nonlocal, ast.Raise, ast.Try, ast.Assert)):
+        if isinstance(
+            n,
+            (
+                ast.Call,
+                ast.Attribute,
+                ast.Subscript,
+                ast.Dict,
+                ast.List,
+                ast.Tuple,
+                ast.Lambda,
+                ast.ListComp,
+                ast.SetComp,
+                ast.DictComp,
+                ast.GeneratorExp,
+                ast.Import,
+                ast.ImportFrom,
+                ast.Assign,
+                ast.AugAssign,
+                ast.While,
+                ast.For,
+                ast.With,
+                ast.If,
+                ast.FunctionDef,
+                ast.ClassDef,
+                ast.Delete,
+                ast.Yield,
+                ast.YieldFrom,
+                ast.Global,
+                ast.Nonlocal,
+                ast.Raise,
+                ast.Try,
+                ast.Assert,
+            ),
+        ):
             raise UnsafeExpression("Disallowed syntax in expression")
     result = _eval_node(tree, variables)
     if not isinstance(result, (bool, int, float)):
@@ -136,4 +166,3 @@ def evaluate_rule(rule: dict, inputs: Mapping[str, Any]) -> RuleResult:
         remediation=rule.get("remediation"),
         details={"variables": variables},
     )
-

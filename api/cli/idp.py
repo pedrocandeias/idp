@@ -11,7 +11,6 @@ import requests
 import typer
 from platformdirs import user_config_dir
 
-
 app = typer.Typer(help="IDP CLI")
 eval_app = typer.Typer(help="Evaluation commands")
 report_app = typer.Typer(help="Report commands")
@@ -26,7 +25,10 @@ CONF_FILE = CONF_DIR / "config.json"
 
 
 def load_config() -> dict:
-    cfg = {"base_url": os.getenv("IDP_API_URL", "http://localhost:8000"), "token": os.getenv("IDP_TOKEN")}
+    cfg = {
+        "base_url": os.getenv("IDP_API_URL", "http://localhost:8000"),
+        "token": os.getenv("IDP_TOKEN"),
+    }
     if CONF_FILE.exists():
         try:
             cfg.update(json.loads(CONF_FILE.read_text()))
@@ -50,7 +52,9 @@ def _headers(token: Optional[str]) -> dict:
 @app.command()
 def login(
     base_url: str = typer.Option("http://localhost:8000", help="API base URL"),
-    token: str = typer.Option(..., prompt=True, hide_input=True, help="JWT access token"),
+    token: str = typer.Option(
+        ..., prompt=True, hide_input=True, help="JWT access token"
+    ),
     json_out: bool = typer.Option(False, "--json", help="JSON output"),
 ):
     """Save API URL and token to local user config."""
@@ -74,7 +78,16 @@ def eval_submit(
     cfg = load_config()
     url = f"{cfg['base_url'].rstrip('/')}/api/v1/evaluations"
     try:
-        r = requests.post(url, json={"artifact_id": artifact, "scenario_id": scenario, "rulepack_id": rulepack}, headers=_headers(cfg.get("token")), timeout=30)
+        r = requests.post(
+            url,
+            json={
+                "artifact_id": artifact,
+                "scenario_id": scenario,
+                "rulepack_id": rulepack,
+            },
+            headers=_headers(cfg.get("token")),
+            timeout=30,
+        )
         if not r.ok:
             typer.echo(r.text, err=True)
             raise SystemExit(1)
@@ -127,10 +140,14 @@ def report_fetch(
 ):
     """Generate and download HTML/PDF report for a run."""
     cfg = load_config()
-    base = cfg['base_url'].rstrip('/')
+    base = cfg["base_url"].rstrip("/")
     try:
         # trigger report build
-        r = requests.post(f"{base}/api/v1/evaluations/{id}/report", headers=_headers(cfg.get("token")), timeout=60)
+        r = requests.post(
+            f"{base}/api/v1/evaluations/{id}/report",
+            headers=_headers(cfg.get("token")),
+            timeout=60,
+        )
         if not r.ok:
             typer.echo(r.text, err=True)
             raise SystemExit(1)
@@ -145,7 +162,11 @@ def report_fetch(
         p = requests.get(rep["presigned_pdf_url"], timeout=60)
         p.raise_for_status()
         pdf_path.write_bytes(p.content)
-        result = {"html": str(html_path), "pdf": str(pdf_path), "checksum": rep.get("checksum_sha256")}
+        result = {
+            "html": str(html_path),
+            "pdf": str(pdf_path),
+            "checksum": rep.get("checksum_sha256"),
+        }
         if json_out:
             typer.echo(json.dumps(result))
         else:
@@ -161,18 +182,30 @@ def report_fetch(
 def datasets_list(json_out: bool = typer.Option(False, "--json", help="JSON output")):
     """List available datasets (anthropometrics and abilities)."""
     cfg = load_config()
-    base = cfg['base_url'].rstrip('/')
+    base = cfg["base_url"].rstrip("/")
     try:
-        r1 = requests.get(f"{base}/api/v1/datasets/anthropometrics", headers=_headers(cfg.get("token")), timeout=30)
-        r2 = requests.get(f"{base}/api/v1/datasets/abilities", headers=_headers(cfg.get("token")), timeout=30)
+        r1 = requests.get(
+            f"{base}/api/v1/datasets/anthropometrics",
+            headers=_headers(cfg.get("token")),
+            timeout=30,
+        )
+        r2 = requests.get(
+            f"{base}/api/v1/datasets/abilities",
+            headers=_headers(cfg.get("token")),
+            timeout=30,
+        )
         if not r1.ok or not r2.ok:
-            typer.echo(f"{r1.status_code}:{r1.text} {r2.status_code}:{r2.text}", err=True)
+            typer.echo(
+                f"{r1.status_code}:{r1.text} {r2.status_code}:{r2.text}", err=True
+            )
             raise SystemExit(1)
         data = {"anthropometrics": r1.json(), "abilities": r2.json()}
         if json_out:
             typer.echo(json.dumps(data))
         else:
-            typer.echo(f"Anthropometrics: {len(data['anthropometrics'])} • Abilities: {len(data['abilities'])}")
+            typer.echo(
+                f"Anthropometrics: {len(data['anthropometrics'])} • Abilities: {len(data['abilities'])}"
+            )
     except SystemExit:
         raise
     except Exception as e:
@@ -182,4 +215,3 @@ def datasets_list(json_out: bool = typer.Option(False, "--json", help="JSON outp
 
 if __name__ == "__main__":
     app()
-
