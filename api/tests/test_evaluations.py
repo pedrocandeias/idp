@@ -44,6 +44,10 @@ def client(db_session, monkeypatch):
 
     # Celery eager
     celery_app.conf.task_always_eager = True
+    # Ensure tasks module uses the same session
+    import app.tasks as tasks_mod
+
+    tasks_mod.SessionLocal = lambda: db_session
 
     with TestClient(app) as c:
         yield c

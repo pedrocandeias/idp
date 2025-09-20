@@ -59,6 +59,10 @@ def client(db_session, monkeypatch):
     import app.middleware as app_mw
 
     app_mw.SessionLocal = lambda: db_session
+    # Ensure Celery tasks use test session
+    import app.tasks as tasks_mod
+
+    tasks_mod.SessionLocal = lambda: db_session
 
     fake = FakeS3()
     monkeypatch.setattr(storage_mod, "get_s3_client", lambda: fake)
@@ -107,6 +111,7 @@ def ready_evaluation(client, db_session):
     db_session.add(sc)
     db_session.commit()
     db_session.refresh(sc)
+    sc_id = sc.id
     art = models.DesignArtifact(project_id=proj["id"], name="A", type="gltf")
     db_session.add(art)
     db_session.commit()
@@ -124,7 +129,7 @@ def ready_evaluation(client, db_session):
     celery_app.conf.task_always_eager = True
     enq = client.post(
         "/api/v1/evaluations",
-        json={"artifact_id": art_id, "scenario_id": sc.id, "rulepack_id": rp["id"]},
+        json={"artifact_id": art_id, "scenario_id": sc_id, "rulepack_id": rp["id"]},
         headers=headers,
     )
     eid = enq.json()["id"]
