@@ -4,6 +4,7 @@ from app.db import Base, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
@@ -11,8 +12,13 @@ SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 @pytest.fixture(scope="function")
 def db_session():
+    # Ensure models are imported to populate metadata
+    from app import models as _models  # noqa: F401
+
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -59,6 +65,11 @@ def setup_entities(client):
     client.post(
         "/auth/register", json={"email": email, "password": password, "org_id": org_id}
     )
+    # Elevate role to allow rulepack creation
+    user = db_session.query(models.User).filter(models.User.email == email).first()
+    user.roles = ["researcher"]
+    db_session.add(user)
+    db_session.commit()
     tok = client.post(
         "/auth/token",
         data={"username": email, "password": password},
@@ -76,9 +87,14 @@ def setup_entities(client):
 
 
 def test_evaluation_happy_path(client, db_session):
-    # Prepare entities
-    r = client.post("/api/v1/organizations", json={"name": "orgE"})
-    org_id = r.json()["id"]
+    # Prepare entities: create org directly in DB
+    from app import models
+
+    org = models.Org(name="orgE")
+    db_session.add(org)
+    db_session.commit()
+    db_session.refresh(org)
+    org_id = org.id
     email = "e@example.com"
     password = "secret123"
     client.post(
@@ -96,8 +112,6 @@ def test_evaluation_happy_path(client, db_session):
     ).json()
 
     # Insert scenario directly via DB
-    from app import models
-
     sc = models.SimulationScenario(
         project_id=proj["id"],
         name="s1",

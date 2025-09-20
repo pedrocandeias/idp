@@ -9,6 +9,7 @@ from app.db import Base, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
@@ -30,8 +31,13 @@ class FakeS3:
 
 @pytest.fixture(scope="function")
 def db_session():
+    # Ensure models are registered before creating tables
+    from app import models as _models  # noqa: F401
+
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -84,7 +90,7 @@ def auth_headers(client, db_session):
     password = "secret123"
     r = client.post(
         "/auth/register",
-        json={"email": email, "password": password, "org_id": org["id"]},
+        json={"email": email, "password": password, "org_id": org.id},
     )
     assert r.status_code == 201
     # Login

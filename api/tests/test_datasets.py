@@ -5,6 +5,7 @@ from app.db import Base, get_db
 from app.main import app
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import sessionmaker
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
@@ -12,8 +13,13 @@ SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 @pytest.fixture(scope="function")
 def db_session():
+    # Ensure models are imported so Base.metadata is populated
+    from app import models as _models  # noqa: F401
+
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+        SQLALCHEMY_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -56,6 +62,11 @@ def get_auth_headers(client, db_session):
         "/auth/register", json={"email": email, "password": password, "org_id": org_id}
     )
     assert r.status_code == 201
+    # Elevate role for dataset creation
+    u = db_session.query(models.User).filter(models.User.email == email).first()
+    u.roles = ["researcher"]
+    db_session.add(u)
+    db_session.commit()
     # Login
     r = client.post(
         "/auth/token",
@@ -66,7 +77,7 @@ def get_auth_headers(client, db_session):
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_anthro_percentiles(client):
+def test_anthro_percentiles(client, db_session):
     headers = get_auth_headers(client, db_session)
 
     ds = {
