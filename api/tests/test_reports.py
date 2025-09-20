@@ -69,6 +69,10 @@ def client(db_session, monkeypatch):
     monkeypatch.setattr(
         storage_mod, "ensure_bucket_exists", lambda client=None, bucket=None: None
     )
+    # Patch the evaluations router to use the fake S3 client as well
+    import app.routers.evaluations as eval_router
+
+    monkeypatch.setattr(eval_router, "get_s3_client", lambda: fake)
     from app.config import settings
 
     settings.s3_bucket = "test-bkt"
