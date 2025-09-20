@@ -87,7 +87,14 @@ def query_percentile(
     if not seg:
         raise KeyError("No matching segment")
     ps = seg.get("percentiles") or {}
-    p5 = float(ps.get("p5"))
-    p50 = float(ps.get("p50"))
-    p95 = float(ps.get("p95"))
+
+    def _as_float(val: Any, name: str) -> float:
+        try:
+            return float(val)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise KeyError(f"Missing or invalid percentile {name}") from exc
+
+    p5 = _as_float(ps.get("p5"), "p5")
+    p50 = _as_float(ps.get("p50"), "p50")
+    p95 = _as_float(ps.get("p95"), "p95")
     return interpolate_percentile(p5, p50, p95, float(percentile))

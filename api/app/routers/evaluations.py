@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -19,9 +21,15 @@ router = APIRouter(prefix="/api/v1/evaluations", tags=["evaluations"])
 def enqueue_evaluation(
     payload: dict, current=Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    artifact_id = int(payload.get("artifact_id"))
-    scenario_id = int(payload.get("scenario_id"))
-    rulepack_id = int(payload.get("rulepack_id"))
+    def _as_int(val: Any, name: str) -> int:
+        try:
+            return int(val)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Invalid {name}") from exc
+
+    artifact_id = _as_int(payload.get("artifact_id"), "artifact_id")
+    scenario_id = _as_int(payload.get("scenario_id"), "scenario_id")
+    rulepack_id = _as_int(payload.get("rulepack_id"), "rulepack_id")
     webhook_url = payload.get("webhook_url")
 
     scenario = db.get(models.SimulationScenario, scenario_id)

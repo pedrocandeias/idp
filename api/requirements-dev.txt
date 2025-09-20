@@ -1,2 +1,4 @@
 pytest==8.3.3
 httpx==0.27.2
+types-requests==2.32.0.20240914
+types-passlib==1.7.7.20240819
