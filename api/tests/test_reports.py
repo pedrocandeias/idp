@@ -111,6 +111,7 @@ def ready_evaluation(client, db_session):
     db_session.add(art)
     db_session.commit()
     db_session.refresh(art)
+    art_id = art.id
     # minimal rulepack
     rp = client.post(
         "/api/v1/rulepacks",
@@ -123,7 +124,7 @@ def ready_evaluation(client, db_session):
     celery_app.conf.task_always_eager = True
     enq = client.post(
         "/api/v1/evaluations",
-        json={"artifact_id": art.id, "scenario_id": sc.id, "rulepack_id": rp["id"]},
+        json={"artifact_id": art_id, "scenario_id": sc.id, "rulepack_id": rp["id"]},
         headers=headers,
     )
     eid = enq.json()["id"]

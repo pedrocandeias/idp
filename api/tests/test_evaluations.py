@@ -100,6 +100,11 @@ def test_evaluation_happy_path(client, db_session):
     client.post(
         "/auth/register", json={"email": email, "password": password, "org_id": org_id}
     )
+    # Elevate role to allow project & rulepack creation
+    user = db_session.query(models.User).filter(models.User.email == email).first()
+    user.roles = ["researcher", "designer"]
+    db_session.add(user)
+    db_session.commit()
     tok = client.post(
         "/auth/token",
         data={"username": email, "password": password},
@@ -126,12 +131,14 @@ def test_evaluation_happy_path(client, db_session):
     db_session.add(sc)
     db_session.commit()
     db_session.refresh(sc)
+    sc_id = sc.id
 
     # Create artifact directly
     art = models.DesignArtifact(project_id=proj["id"], name="a1", type="gltf")
     db_session.add(art)
     db_session.commit()
     db_session.refresh(art)
+    art_id = art.id
 
     # Create rulepack
     rp_payload = {
@@ -154,7 +161,7 @@ def test_evaluation_happy_path(client, db_session):
     # Enqueue evaluation
     enq = client.post(
         "/api/v1/evaluations",
-        json={"artifact_id": art.id, "scenario_id": sc.id, "rulepack_id": rp["id"]},
+        json={"artifact_id": art_id, "scenario_id": sc_id, "rulepack_id": rp.get("id")},
         headers=headers,
     )
     assert enq.status_code == 202, enq.text

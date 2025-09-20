@@ -62,6 +62,8 @@ def auth_headers(client, db_session):
     orgB = models.Org(name="OrgB")
     db_session.add_all([orgA, orgB])
     db_session.commit()
+    orgA_id = orgA.id
+    orgB_id = orgB.id
     # Create users directly
     ua = models.User(
         email="a@x", hashed_password="hpw", org_id=orgA.id, roles=["designer"]
@@ -78,7 +80,7 @@ def auth_headers(client, db_session):
     # Create via API register to get token for A
     ra = client.post(
         "/auth/register",
-        json={"email": "userA@example.com", "password": "p", "org_id": orgA.id},
+        json={"email": "userA@example.com", "password": "p", "org_id": orgA_id},
     )
     ta = client.post(
         "/auth/token",
@@ -87,7 +89,7 @@ def auth_headers(client, db_session):
     ).json()["access_token"]
     rb = client.post(
         "/auth/register",
-        json={"email": "userB@example.com", "password": "p", "org_id": orgB.id},
+        json={"email": "userB@example.com", "password": "p", "org_id": orgB_id},
     )
     tb = client.post(
         "/auth/token",
