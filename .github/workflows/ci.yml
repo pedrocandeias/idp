@@ -36,10 +36,14 @@ jobs:
 
       - name: Type-check (mypy)
         working-directory: api
+        env:
+          PYTHONPATH: ${{ github.workspace }}/api
         run: mypy app || true
 
       - name: Run tests (API)
         working-directory: api
+        env:
+          PYTHONPATH: ${{ github.workspace }}/api
         run: pytest -q
 
       - name: Build Docker images
