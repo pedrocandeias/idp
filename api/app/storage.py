@@ -10,16 +10,21 @@ from botocore.config import Config as BotoConfig
 from .config import settings
 
 
-def get_s3_client():
+def get_s3_client(endpoint_url: str | None = None):
     return boto3.client(
         "s3",
-        endpoint_url=settings.s3_endpoint_url,
+        endpoint_url=endpoint_url or settings.s3_endpoint_url,
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
         region_name=settings.s3_region,
         use_ssl=settings.s3_use_ssl,
         config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
     )
+
+
+def get_public_s3_client():
+    ep = settings.s3_public_endpoint_url or settings.s3_endpoint_url
+    return get_s3_client(endpoint_url=ep)
 
 
 def ensure_bucket_exists(client=None, bucket: Optional[str] = None):
@@ -35,6 +40,24 @@ def ensure_bucket_exists(client=None, bucket: Optional[str] = None):
                 "LocationConstraint": settings.s3_region
             }
         client.create_bucket(**params)
+    # Ensure permissive CORS for web UI origin
+    try:
+        client.put_bucket_cors(
+            Bucket=bucket,
+            CORSConfiguration={
+                "CORSRules": [
+                    {
+                        "AllowedMethods": ["GET", "HEAD"],
+                        "AllowedOrigins": [settings.s3_cors_allow_origin],
+                        "AllowedHeaders": ["*"],
+                        "ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+                        "MaxAgeSeconds": 3000,
+                    }
+                ]
+            },
+        )
+    except Exception:
+        pass
 
 
 def upload_bytes(
@@ -58,7 +81,7 @@ def upload_bytes(
 def presigned_get(
     key: str, expires: Optional[int] = None, client=None, bucket: Optional[str] = None
 ) -> str:
-    client = client or get_s3_client()
+    client = client or get_public_s3_client()
     bucket = bucket or settings.s3_bucket
     return client.generate_presigned_url(
         "get_object",
@@ -74,7 +97,7 @@ def presigned_put(
     client=None,
     bucket: Optional[str] = None,
 ) -> str:
-    client = client or get_s3_client()
+    client = client or get_public_s3_client()
     bucket = bucket or settings.s3_bucket
     params = {"Bucket": bucket, "Key": key}
     if content_type:
@@ -91,3 +114,13 @@ def new_object_key(project_id: int, filename: str) -> str:
     if "." in filename:
         ext = filename.rsplit(".", 1)[1].lower()
     return f"projects/{project_id}/artifacts/{uuid.uuid4().hex}{('.' + ext) if ext else ''}"
+
+
+def delete_object(key: str, client=None, bucket: Optional[str] = None) -> None:
+    client = client or get_s3_client()
+    bucket = bucket or settings.s3_bucket
+    try:
+        client.delete_object(Bucket=bucket, Key=key)
+    except Exception:
+        # Ignore errors to keep delete idempotent
+        pass

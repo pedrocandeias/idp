@@ -1,0 +1,109 @@
+{
+  "id": 2,
+  "org_id": 1,
+  "name": "Adults (18\u201365) \u2014 Demo Abilities v1",
+  "data": {
+    "name": "Adults (18\u201365) \u2014 Demo Abilities v1",
+    "source": {
+      "id": "demo-abilities-adult-v1",
+      "title": "Synthetic Adult Physical Abilities (demo)",
+      "region": "EU (generic)",
+      "year": 2024,
+      "method": "Illustrative distributions for development/testing",
+      "notes": "Use conservative but plausible ranges; replace with validated datasets for production."
+    },
+    "distributions": {
+      "push_force_finger_N": {
+        "unit": "N",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 25,
+              "50": 45,
+              "95": 70
+            }
+          }
+        ]
+      },
+      "push_force_thumb_N": {
+        "unit": "N",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 35,
+              "50": 60,
+              "95": 95
+            }
+          }
+        ]
+      },
+      "pull_force_finger_N": {
+        "unit": "N",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 25,
+              "50": 50,
+              "95": 80
+            }
+          }
+        ]
+      },
+      "pinch_grip_force_N": {
+        "unit": "N",
+        "entries": [
+          {
+            "filters": {
+              "grip": "tip",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 20,
+              "50": 40,
+              "95": 65
+            }
+          }
+        ]
+      },
+      "power_grip_torque_Nm": {
+        "unit": "Nm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 0.8,
+              "50": 1.8,
+              "95": 3
+            }
+          }
+        ]
+      },
+      "precision_rotation_torque_Nm": {
+        "unit": "Nm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 0.2,
+              "50": 0.5,
+              "95": 0.9
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -6,6 +6,11 @@ import ProjectsPage from './pages/Projects';
 import ProjectDetailPage from './pages/ProjectDetail';
 import ArtifactsPage from './pages/Artifacts';
 import EvaluationDetailPage from './pages/EvaluationDetail';
+import ScenariosPage from './pages/Scenarios';
+import RulepacksPage from './pages/Rulepacks';
+import DatasetsAnthroPage from './pages/DatasetsAnthro';
+import DatasetsAbilitiesPage from './pages/DatasetsAbilities';
+import AdminPage from './pages/Admin';
 
 export default function App() {
   const [hash, setHash] = useState<string>(window.location.hash || '#/login');
@@ -30,8 +35,18 @@ export default function App() {
       return <ProjectDetailPage id={route.id} />;
     case 'artifacts':
       return <ArtifactsPage projectId={route.id} />;
+    case 'project_scenarios':
+      return <ScenariosPage projectId={route.id} />;
     case 'evaluation':
       return <EvaluationDetailPage id={route.id} />;
+    case 'rulepacks':
+      return <RulepacksPage />;
+    case 'datasets_anthro':
+      return <DatasetsAnthroPage />;
+    case 'datasets_abilities':
+      return <DatasetsAbilitiesPage />;
+    case 'admin':
+      return <AdminPage />;
     default:
       return <LoginPage />;
   }

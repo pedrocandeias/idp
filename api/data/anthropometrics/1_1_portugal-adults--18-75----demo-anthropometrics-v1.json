@@ -1,0 +1,200 @@
+{
+  "id": 1,
+  "org_id": 1,
+  "name": "Portugal Adults (18\u201375) \u2014 Demo Anthropometrics v1",
+  "source": "Synthetic PT Anthropometrics (demo)",
+  "schema": null,
+  "distributions": {
+    "name": "Portugal Adults (18\u201375) \u2014 Demo Anthropometrics v1",
+    "source": {
+      "id": "demo-anthro-pt-v1",
+      "title": "Synthetic PT Anthropometrics (demo)",
+      "region": "PT",
+      "year": 2024,
+      "method": "Illustrative, non-normative blend for development/testing",
+      "notes": "Approximate values for MVP; align with local studies for production."
+    },
+    "distributions": {
+      "stature_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 1530,
+              "50": 1680,
+              "95": 1830
+            }
+          },
+          {
+            "filters": {
+              "sex": "male"
+            },
+            "percentiles": {
+              "5": 1610,
+              "50": 1750,
+              "95": 1900
+            }
+          },
+          {
+            "filters": {
+              "sex": "female"
+            },
+            "percentiles": {
+              "5": 1480,
+              "50": 1620,
+              "95": 1750
+            }
+          }
+        ]
+      },
+      "sitting_height_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 820,
+              "50": 890,
+              "95": 960
+            }
+          }
+        ]
+      },
+      "arm_length_acromion_to_grip_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 510,
+              "50": 580,
+              "95": 650
+            }
+          }
+        ]
+      },
+      "vertical_reach_max_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "posture": "standing",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 1930,
+              "50": 2120,
+              "95": 2310
+            }
+          },
+          {
+            "filters": {
+              "posture": "seated",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 1230,
+              "50": 1380,
+              "95": 1530
+            }
+          }
+        ]
+      },
+      "forward_reach_max_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "posture": "standing",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 590,
+              "50": 690,
+              "95": 790
+            }
+          },
+          {
+            "filters": {
+              "posture": "seated",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 440,
+              "50": 540,
+              "95": 640
+            }
+          }
+        ]
+      },
+      "lateral_reach_max_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "posture": "seated",
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 245,
+              "50": 305,
+              "95": 375
+            }
+          }
+        ]
+      },
+      "hand_span_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 168,
+              "50": 188,
+              "95": 208
+            }
+          }
+        ]
+      },
+      "palm_breadth_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 77,
+              "50": 84,
+              "95": 93
+            }
+          }
+        ]
+      },
+      "finger_length_index_mm": {
+        "unit": "mm",
+        "entries": [
+          {
+            "filters": {
+              "sex": "all"
+            },
+            "percentiles": {
+              "5": 64,
+              "50": 69,
+              "95": 74
+            }
+          }
+        ]
+      }
+    }
+  }
+}

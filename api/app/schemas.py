@@ -1,6 +1,6 @@
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class HealthResponse(BaseModel):
@@ -8,14 +8,37 @@ class HealthResponse(BaseModel):
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     org_id: Optional[int] = None
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        # Accept standard emails and special-use domains like .local for demos.
+        try:
+            from email_validator import validate_email
+
+            info = validate_email(v, check_deliverability=False)
+            return info.normalized
+        except Exception:
+            raise ValueError("Invalid email")
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# User
+class UserRead(BaseModel):
+    id: int
+    email: str
+    org_id: int | None = None
+    roles: list[str] = []
+
+    class Config:
+        from_attributes = True
 
 
 # Organization

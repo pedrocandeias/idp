@@ -12,7 +12,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     try {
-      const token = await api.login(email, password);
+      const token = await api.login(email.trim(), password);
       setToken(token);
       window.location.hash = href({ name: 'projects' });
     } catch (err: any) {
@@ -35,4 +35,3 @@ export default function LoginPage() {
     </Layout>
   );
 }
-

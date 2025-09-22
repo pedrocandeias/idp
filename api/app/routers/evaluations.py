@@ -185,6 +185,26 @@ def create_report(
         "html_key": report.html_key,
         "pdf_key": report.pdf_key,
         "checksum_sha256": report.checksum_sha256,
-        "presigned_html_url": presigned_get(html_key, client=client),
-        "presigned_pdf_url": presigned_get(pdf_key, client=client),
+        # Use public endpoint for browser-accessible URLs
+        "presigned_html_url": presigned_get(html_key),
+        "presigned_pdf_url": presigned_get(pdf_key),
     }
+
+
+@router.delete("/{evaluation_id}")
+def delete_evaluation(
+    evaluation_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
+    run = db.get(models.EvaluationRun, evaluation_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Not found")
+    scen = db.get(models.SimulationScenario, run.scenario_id)
+    proj = db.get(models.Project, scen.project_id) if scen else None
+    if "superadmin" not in (current.roles or []) and (
+        not proj or proj.org_id != current.org_id
+    ):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    require_role(current, ["org_admin", "researcher"])  # destructive
+    db.delete(run)
+    db.commit()
+    return {"status": "ok", "deleted": True, "id": evaluation_id}

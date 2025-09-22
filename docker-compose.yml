@@ -39,7 +39,8 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-    command: ["sh", "-c", "while sleep 3600; do :; done"]
+    # Install deps into bind mount, then run Vite on 0.0.0.0:3000
+    command: ["sh", "-lc", "npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0"]
     env_file:
       - .env
     working_dir: /app

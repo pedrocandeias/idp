@@ -18,6 +18,7 @@ from ..storage import (
     new_object_key,
     presigned_get,
     presigned_put,
+    delete_object,
     upload_bytes,
 )
 
@@ -96,7 +97,7 @@ def upload_artifact(
     params_key: str | None = None
     if params is not None:
         pdata = params.file.read()
-        if len(pdata) > 5 * 1024 * 1024:
+        if len(pdata) > settings.max_params_mb * 1024 * 1024:
             raise HTTPException(status_code=413, detail="Params too large")
         # Validate JSON
         try:
@@ -128,8 +129,91 @@ def upload_artifact(
     db.commit()
     db.refresh(art)
 
-    url = presigned_get(object_key, client=client)
+    # Generate a browser-reachable URL (uses public endpoint)
+    url = presigned_get(object_key)
 
     resp = DesignArtifactRead.model_validate(art)
     resp.presigned_url = url
     return resp
+
+
+@router.get("")
+def list_artifacts(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+) -> list[DesignArtifactRead]:
+    project = db.get(models.Project, project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if "superadmin" not in (current.roles or []) and project.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    items = (
+        db.query(models.DesignArtifact)
+        .filter(models.DesignArtifact.project_id == project_id)
+        .order_by(models.DesignArtifact.id.desc())
+        .all()
+    )
+    out: list[DesignArtifactRead] = []
+    for a in items:
+        resp = DesignArtifactRead.model_validate(a)
+        if a.object_key:
+            try:
+                # Use public endpoint for browser access
+                resp.presigned_url = presigned_get(a.object_key)
+            except Exception:
+                resp.presigned_url = None
+        out.append(resp)
+    return out
+
+
+# Common artifact routes (by id)
+router_common = APIRouter(prefix="/api/v1/artifacts", tags=["artifacts"])
+
+
+@router_common.get("/{artifact_id}")
+def get_artifact_by_id(
+    artifact_id: int,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+) -> DesignArtifactRead:
+    art = db.get(models.DesignArtifact, artifact_id)
+    if not art:
+        raise HTTPException(status_code=404, detail="Not found")
+    proj = db.get(models.Project, art.project_id)
+    if "superadmin" not in (current.roles or []) and proj.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    resp = DesignArtifactRead.model_validate(art)
+    if art.object_key:
+        try:
+            resp.presigned_url = presigned_get(art.object_key)
+        except Exception:
+            resp.presigned_url = None
+    return resp
+
+
+@router.delete("/{artifact_id}", status_code=204)
+def delete_artifact(
+    project_id: int,
+    artifact_id: int,
+    db: Session = Depends(get_db),
+    current=Depends(get_current_user),
+):
+    art = db.get(models.DesignArtifact, artifact_id)
+    if not art or art.project_id != project_id:
+        raise HTTPException(status_code=404, detail="Not found")
+    # scope check
+    proj = db.get(models.Project, project_id)
+    if "superadmin" not in (current.roles or []) and proj.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    require_role(current, ["org_admin", "designer"])  # delete allowed to editors
+    # delete objects if present
+    client = get_s3_client()
+    if art.object_key:
+        delete_object(art.object_key, client=client)
+    if art.params_key:
+        delete_object(art.params_key, client=client)
+    db.delete(art)
+    db.commit()
+    return None

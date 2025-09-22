@@ -8,6 +8,7 @@ from ..db import get_db
 from ..dependencies import get_current_user
 from ..rbac import require_role
 from ..schemas import AbilityProfileCreate, AbilityProfileRead
+from ..persistence import save_ability_json, delete_ability_json
 
 router = APIRouter(prefix="/api/v1/datasets/abilities", tags=["datasets:abilities"])
 
@@ -39,4 +40,68 @@ def create_ability(
     db.add(item)
     db.commit()
     db.refresh(item)
+    try:
+        save_ability_json(item)
+    except Exception:
+        pass
+    return AbilityProfileRead.model_validate(item)
+
+
+@router.get("/{ability_id}", response_model=AbilityProfileRead)
+def get_ability(
+    ability_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
+    item = db.get(models.AbilityProfile, ability_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    if "superadmin" not in (current.roles or []) and item.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return AbilityProfileRead.model_validate(item)
+
+
+@router.delete("/{ability_id}", status_code=204)
+def delete_ability(
+    ability_id: int, current=Depends(get_current_user), db: Session = Depends(get_db)
+):
+    item = db.get(models.AbilityProfile, ability_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    if "superadmin" not in (current.roles or []) and item.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    require_role(current, ["org_admin", "researcher"])  # destructive
+    db.delete(item)
+    db.commit()
+    try:
+        delete_ability_json(ability_id)
+    except Exception:
+        pass
+    return None
+
+
+@router.patch("/{ability_id}", response_model=AbilityProfileRead)
+def update_ability(
+    ability_id: int,
+    payload: dict,
+    current=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    item = db.get(models.AbilityProfile, ability_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    if "superadmin" not in (current.roles or []) and item.org_id != current.org_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    require_role(current, ["org_admin", "researcher"])  # update
+    name = payload.get('name')
+    if isinstance(name, str):
+        item.name = name
+    data = payload.get('data')
+    if data is not None:
+        item.data = data
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    try:
+        save_ability_json(item)
+    except Exception:
+        pass
     return AbilityProfileRead.model_validate(item)

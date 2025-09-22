@@ -59,6 +59,27 @@ class Project(Base):
     )
 
     org: Mapped[Org] = relationship("Org")
+    # Optional relationship for memberships (not strictly needed)
+    # members: Mapped[list["ProjectMembership"]] = relationship(
+    #     "ProjectMembership", back_populates="project", cascade="all,delete"
+    # )
+
+
+class ProjectMembership(Base):
+    __tablename__ = "project_memberships"
+    __table_args__ = (
+        UniqueConstraint("project_id", "user_id", name="uq_project_user"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+    # project: Mapped[Project] = relationship("Project", back_populates="members")
+    # user: Mapped[User] = relationship("User")
 
 
 class DesignArtifact(Base):

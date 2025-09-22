@@ -1,6 +1,8 @@
-import React, { useState, DragEvent } from 'react';
+import React, { useState, DragEvent, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { api } from '../lib/api';
+import Confirm from '../components/Confirm';
+import Toast from '../components/Toast';
+import { api, normalizeS3 } from '../lib/api';
 import { href } from '../router';
 
 export default function ArtifactsPage({ projectId }: { projectId: number }) {
@@ -11,6 +13,15 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
   const [artifact, setArtifact] = useState<any>(null);
   const [scenarioId, setScenarioId] = useState<number | ''>('');
   const [rulepackId, setRulepackId] = useState<number | ''>('');
+  const [scenarios, setScenarios] = useState<Array<{ id: number; name: string }>>([]);
+  const [rulepacks, setRulepacks] = useState<Array<{ id: number; name: string; version?: string }>>([]);
+  const [newScenName, setNewScenName] = useState('');
+  const [newScenConfig, setNewScenConfig] = useState('');
+  const [newRpName, setNewRpName] = useState('');
+  const [newRpVersion, setNewRpVersion] = useState('1.0.0');
+  const [newRpRules, setNewRpRules] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [toast, setToast] = useState<{ msg: string } | null>(null);
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -23,15 +34,33 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
   }
   function onDragOver(e: DragEvent) { e.preventDefault(); }
 
+  async function loadLists() {
+    try {
+      const [scs, rps] = await Promise.all([
+        api.scenarios.list(projectId),
+        api.rulepacks.list(),
+      ]);
+      setScenarios(scs);
+      setRulepacks(rps);
+      if (!scenarioId && scs.length) setScenarioId(scs[0].id);
+      if (!rulepackId && rps.length) setRulepackId(rps[0].id);
+    } catch (e: any) {
+      setStatus(e.message || 'Failed to load lists');
+    }
+  }
+
+  useEffect(() => { void loadLists(); }, [projectId]);
+
   async function onUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
     setStatus('Uploading...');
     try {
       const res = await api.artifacts.upload(projectId, file, params ?? undefined, name || file.name);
-      setArtifact(res);
-      if (res.presigned_url) {
-        sessionStorage.setItem(`artifact_url_${res.id}`, res.presigned_url as string);
+      const normalized = { ...res, presigned_url: normalizeS3(res.presigned_url) };
+      setArtifact(normalized);
+      if (normalized.presigned_url) {
+        sessionStorage.setItem(`artifact_url_${res.id}`, normalized.presigned_url as string);
       }
       setStatus('Uploaded.');
     } catch (e: any) {
@@ -48,6 +77,39 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
       window.location.hash = href({ name: 'evaluation', id: res.id });
     } catch (e: any) {
       setStatus(e.message);
+    }
+  }
+
+  async function onCreateScenario(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      let cfg: any = undefined;
+      if (newScenConfig.trim()) cfg = JSON.parse(newScenConfig);
+      const s = await api.scenarios.create(projectId, newScenName || 'Scenario', cfg);
+      setScenarios((prev) => [...prev, s]);
+      setScenarioId(s.id);
+      setNewScenName('');
+      setNewScenConfig('');
+      setStatus('Scenario created');
+    } catch (e: any) {
+      setStatus(e.message || 'Failed to create scenario');
+    }
+  }
+
+  async function onCreateRulepack(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      let rules: any = undefined;
+      if (newRpRules.trim()) rules = JSON.parse(newRpRules);
+      const rp = await api.rulepacks.create(newRpName || 'RulePack', newRpVersion || '1.0.0', rules);
+      setRulepacks((prev) => [...prev, rp]);
+      setRulepackId(rp.id);
+      setNewRpName('');
+      setNewRpVersion('1.0.0');
+      setNewRpRules('');
+      setStatus('RulePack created');
+    } catch (e: any) {
+      setStatus(e.message || 'Failed to create rulepack');
     }
   }
 
@@ -71,15 +133,81 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
       {artifact && (
         <div className="panel">
           <h2>Launch Evaluation</h2>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div className="muted">Current artifact ID: {artifact?.id}</div>
+            <button className="btn btn-danger" onClick={() => setConfirmDelete(true)}>Delete Artifact</button>
+          </div>
+          <div className="space" />
+          <div className="row">
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <h3>Scenario</h3>
+              <label htmlFor="scSel">Select</label>
+              <select id="scSel" value={scenarioId || ''} onChange={(e) => setScenarioId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">-- choose --</option>
+                {scenarios.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name} (#{s.id})</option>
+                ))}
+              </select>
+              <div className="space" />
+              <form onSubmit={onCreateScenario} aria-label="Create scenario">
+                <label htmlFor="nsn">New name</label>
+                <input id="nsn" value={newScenName} onChange={(e) => setNewScenName(e.target.value)} placeholder="My Scenario" />
+                <label htmlFor="nscfg">Config JSON (optional)</label>
+                <textarea id="nscfg" value={newScenConfig} onChange={(e) => setNewScenConfig(e.target.value)} rows={4} placeholder='{"distance_to_control_cm":50}' />
+                <div className="space" />
+                <button type="submit">Create Scenario</button>
+              </form>
+            </div>
+            <div style={{ width: 16 }} />
+            <div style={{ flex: 1, minWidth: 280 }}>
+              <h3>RulePack</h3>
+              <label htmlFor="rpSel">Select</label>
+              <select id="rpSel" value={rulepackId || ''} onChange={(e) => setRulepackId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">-- choose --</option>
+                {rulepacks.map((rp) => (
+                  <option key={rp.id} value={rp.id}>{rp.name}{rp.version ? ` v${rp.version}` : ''} (#{rp.id})</option>
+                ))}
+              </select>
+              <div className="space" />
+              <form onSubmit={onCreateRulepack} aria-label="Create rulepack">
+                <label htmlFor="nrn">New name</label>
+                <input id="nrn" value={newRpName} onChange={(e) => setNewRpName(e.target.value)} placeholder="My Rules" />
+                <label htmlFor="nrv">Version</label>
+                <input id="nrv" value={newRpVersion} onChange={(e) => setNewRpVersion(e.target.value)} placeholder="1.0.0" />
+                <label htmlFor="nrr">Rules JSON (optional)</label>
+                <textarea id="nrr" value={newRpRules} onChange={(e) => setNewRpRules(e.target.value)} rows={4} placeholder='{"example":true}' />
+                <div className="space" />
+                <button type="submit">Create RulePack</button>
+              </form>
+            </div>
+          </div>
+          <div className="space" />
           <form onSubmit={onLaunchEvaluation} className="row" aria-label="Launch evaluation">
-            <label htmlFor="sc">Scenario ID</label>
-            <input id="sc" value={scenarioId} onChange={(e) => setScenarioId(e.target.value ? Number(e.target.value) : '')} />
-            <label htmlFor="rp">RulePack ID</label>
-            <input id="rp" value={rulepackId} onChange={(e) => setRulepackId(e.target.value ? Number(e.target.value) : '')} />
-            <button type="submit" aria-label="Enqueue evaluation">Enqueue</button>
+            <button type="submit" aria-label="Enqueue evaluation" disabled={!scenarioId || !rulepackId}>Enqueue</button>
           </form>
         </div>
       )}
+      <Confirm
+        open={confirmDelete}
+        title="Delete artifact?"
+        message="You will need to upload again."
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={async () => {
+          try {
+            if (artifact?.id) {
+              await api.artifacts.delete(projectId, artifact.id);
+              sessionStorage.removeItem(`artifact_url_${artifact.id}`);
+            }
+            setArtifact(null);
+            setConfirmDelete(false);
+            setToast({ msg: 'Artifact deleted' });
+          } catch (e: any) {
+            setStatus(e.message);
+            setConfirmDelete(false);
+          }
+        }}
+      />
+      {toast && <Toast message={toast.msg} onClose={() => setToast(null)} />}
       {status && <div className="muted" role="status">{status}</div>}
     </Layout>
   );

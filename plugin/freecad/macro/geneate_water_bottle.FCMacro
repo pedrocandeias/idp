@@ -1,0 +1,150 @@
+# FreeCAD macro: generate a seed WATER BOTTLE artifact (STEP) + parametric JSON
+# Coordinate frame: x = lateral, y = depth (front +), z = up (+). Units: mm.
+# Origin at bottle base center (0,0,0). Axis: bottle axis along +Z.
+
+import os, json
+try:
+    import FreeCAD as App
+    import Part
+except Exception as e:
+    raise RuntimeError("Run this inside FreeCAD. Error: %s" % e)
+
+OUTDIR = os.path.expanduser("~/idp_artifacts")
+os.makedirs(OUTDIR, exist_ok=True)
+
+def export_step(objs, path):
+    Part.export(objs, path)
+
+def write_json(data, path):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def bottle_geometry():
+    doc = App.newDocument("artifact_water_bottle")
+
+    # Bottle body
+    body_d = 70.0
+    body_h = 220.0
+    body = Part.makeCylinder(body_d/2.0, body_h, App.Vector(0,0,0), App.Vector(0,0,1))
+    body_obj = App.ActiveDocument.addObject("Part::Feature", "BottleBody")
+    body_obj.Shape = body
+
+    # Shoulder/neck (simple cylinder)
+    neck_d = 30.0
+    neck_h = 20.0
+    neck = Part.makeCylinder(neck_d/2.0, neck_h, App.Vector(0,0,body_h), App.Vector(0,0,1))
+    neck_obj = App.ActiveDocument.addObject("Part::Feature", "Neck")
+    neck_obj.Shape = neck
+
+    # Cap (knob-like)
+    cap_d = 35.0
+    cap_h = 18.0
+    cap = Part.makeCylinder(cap_d/2.0, cap_h, App.Vector(0,0,body_h+neck_h), App.Vector(0,0,1))
+    cap_obj = App.ActiveDocument.addObject("Part::Feature", "Cap")
+    cap_obj.Shape = cap
+
+    # Flip-top button on cap (small push button)
+    btn_d = 12.0
+    btn_h = 3.0
+    # Place button near the rim of the cap, along +X
+    btn = Part.makeCylinder(btn_d/2.0, btn_h,
+                            App.Vector(cap_d/2.0 - btn_d/2.0 - 2.0, 0, body_h+neck_h+cap_h),  # x offset
+                            App.Vector(0,0,1))
+    btn_obj = App.ActiveDocument.addObject("Part::Feature", "FlipTopButton")
+    btn_obj.Shape = btn
+
+    App.ActiveDocument.recompute()
+    return body_obj, neck_obj, cap_obj, btn_obj, {
+        "body_d": body_d, "body_h": body_h,
+        "neck_d": neck_d, "neck_h": neck_h,
+        "cap_d": cap_d, "cap_h": cap_h,
+        "btn_d": btn_d, "btn_h": btn_h
+    }
+
+def main():
+    body_obj, neck_obj, cap_obj, btn_obj, dims = bottle_geometry()
+
+    # Parametric JSON mapped to your RulePack fields
+    # Positions are the component centroids (approx) in mm in the stated frame.
+    params = {
+      "artifact": {
+        "id": "artifact-water-bottle",
+        "name": "Water Bottle (70 mm x 220 mm body)",
+        "dimensions_mm": {
+          "diameter": dims["body_d"],
+          "height_z": dims["body_h"] + dims["neck_h"] + dims["cap_h"]
+        },
+        "frame": "origin at base center; x lateral, y depth, z up"
+      },
+      "controls": [
+        {
+          "id": "cap",
+          "type": "knob",
+          "priority": "primary",
+          "input_method": "power_grip",
+          "action": "rotate",
+          "position": {"x": 0, "y": 0, "z": dims["body_h"] + dims["neck_h"] + dims["cap_h"]/2.0},
+          "geometry": {"diameter_mm": dims["cap_d"]},
+          "actuation": {"required_torque_Nm": 0.35},  # twist torque to open/close
+          "surface": {"static_coefficient_friction": 0.65},
+          "feedback": {"tactile_or_audible": True}
+        },
+        {
+          "id": "flip_top",
+          "type": "button",
+          "priority": "secondary",
+          "input_method": "finger",
+          "action": "push",
+          "position": {"x": dims["cap_d"]/2.0 - dims["btn_d"]/2.0 - 2.0, "y": 0, "z": dims["body_h"] + dims["neck_h"] + dims["cap_h"] + dims["btn_h"]/2.0},
+          "geometry": {"diameter_mm": dims["btn_d"]},
+          "actuation": {"required_force_N": 18, "travel_mm": 1.0},
+          "surface": {"static_coefficient_friction": 0.6},
+          "feedback": {"tactile_or_audible": True}
+        }
+      ],
+      "labels": [
+        {
+          "id": "lbl_brand",
+          "type": "text",
+          "text": "HYDRO+",
+          "position": {"x": 0, "y": 0, "z": 120},
+          "typography": {"x_height_mm": 2.5},
+          "color": {"fg_rgb": [255,255,255], "bg_rgb": [0,100,180]},
+          "material": {"gloss_units": 12},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        },
+        {
+          "id": "lbl_icon_drop",
+          "type": "icon",
+          "icon_name": "water_drop",
+          "position": {"x": 0, "y": 0, "z": 90},
+          "geometry": {"size_mm": 10},
+          "color": {"fg_rgb": [255,255,255], "bg_rgb": [0,100,180]},
+          "material": {"gloss_units": 12},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        }
+      ],
+      "metrics": {
+        "controls": {
+          "min_center_distance_mm": 22  # cap center to flip-top center (approx)
+        },
+        "clearances": {"min_gap_mm": 6}
+      },
+      "tasks": {
+        "primary": {
+          "operation_steps": [
+            {"id": "open_cap", "requires_two_hands": False},
+            {"id": "drink",    "requires_two_hands": False},
+            {"id": "close_cap","requires_two_hands": False}
+          ]
+        }
+      }
+    }
+
+    step_path = os.path.join(OUTDIR, "artifact-water-bottle.step")
+    export_step([body_obj, neck_obj, cap_obj, btn_obj], step_path)
+    write_json(params, os.path.join(OUTDIR, "artifact-water-bottle.json"))
+    print("Exported:", step_path, "and matching JSON")
+
+if __name__ == "__main__":
+    main()

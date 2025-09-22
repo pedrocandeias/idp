@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     # S3 / MinIO
     s3_endpoint_url: str = Field(default="http://minio:9000", alias="S3_ENDPOINT_URL")
+    s3_public_endpoint_url: str | None = Field(default=None, alias="S3_PUBLIC_ENDPOINT_URL")
     s3_region: str = Field(default="us-east-1", alias="S3_REGION")
     s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
@@ -33,6 +34,13 @@ class Settings(BaseSettings):
         default=3600, alias="DOWNLOAD_URL_EXPIRE_SECONDS"
     )
     max_upload_mb: int = Field(default=50, alias="MAX_UPLOAD_MB")
+    max_params_mb: int = Field(default=5, alias="MAX_PARAMS_MB")
+    s3_cors_allow_origin: str = Field(default="http://localhost:3000", alias="S3_CORS_ALLOW_ORIGIN")
+    # Local JSON persistence for rulepacks/datasets
+    data_dir: str = Field(default="data", alias="DATA_DIR")
+    bootstrap_superadmin_secret: str | None = Field(
+        default=None, alias="BOOTSTRAP_SUPERADMIN_SECRET"
+    )
 
     class Config:
         env_file = ".env"

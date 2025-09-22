@@ -9,6 +9,7 @@ Monorepo for IDP. It includes a FastAPI backend with JWT auth, Postgres, Redis, 
 ## Contents
 - Quick Start (Docker Compose)
 - End‑to‑End Demo (one command)
+- Fork Demo (one‑click seed)
 - Manual Flow (login → project → upload → evaluate → report)
 - Web App Usage
 - CLI Usage
@@ -52,6 +53,25 @@ Output
 Demo credentials for the web app
 - email: `demo@idp.local`
 - password: `demo123`
+
+## Fork Demo (one‑click seed)
+For forks that want a quick, self‑contained demo inside the app UI.
+
+- Fork this repo on GitHub. Update the README badge to your `ORG/REPO` if desired.
+- Local setup: `cp .env.example .env` then `make dev`.
+- Create a user (UI has login only). Register via API:
+  - `curl -sX POST http://localhost:8000/auth/register -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"secret"}'`
+- Open http://localhost:3000 and log in with that email/password.
+- Go to Projects and click “Run Demo”. This will:
+  - Create a Demo Project in your org
+  - Upload the sample glTF to MinIO
+  - Create a Demo Scenario and a RulePack (if missing)
+  - Enqueue an evaluation and navigate to its page
+
+API alternative
+- You can also seed directly via API (requires JWT in `Authorization: Bearer <token>`):
+  - `curl -sX POST http://localhost:8000/api/v1/demo/seed -H "Authorization: Bearer $TOKEN" | jq .`
+  - Get a token: `curl -s -X POST http://localhost:8000/auth/token -d 'username=you@example.com&password=secret' -H 'Content-Type: application/x-www-form-urlencoded' | jq -r .access_token`
 
 ## Manual Flow (API)
 If you want to drive the flow yourself with curl.
@@ -192,6 +212,9 @@ mypy app || true
 - Presigned URLs expire: re‑POST `/evaluations/{id}/report`.
 - MinIO console: http://localhost:9001 (default creds in `.env.example`).
 - Worker must be running for evaluations to complete.
+- Bootstrap superadmin (dev only): set `BOOTSTRAP_SUPERADMIN_SECRET` in `.env`, rebuild, then:
+  - `curl -sX POST http://localhost:8000/api/v1/admin/bootstrap_superadmin -H 'Content-Type: application/json' -d '{"email":"you@example.com","secret":"<your-secret>"}' | jq .`
+  - Remove the secret from `.env` after promoting to avoid misuse.
 
 ## Repository Layout
 ```
@@ -204,4 +227,3 @@ docs/           # SECURITY.md and future docs
 
 ## License
 MIT
-

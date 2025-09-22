@@ -12,6 +12,7 @@ from . import models
 from .celery_app import celery_app
 from .db import SessionLocal
 from .rules import evaluate_rule
+from .storage import upload_bytes, new_object_key
 from .simulations import (
     inclusivity_index,
     reach_envelope_ok,
@@ -134,3 +135,34 @@ def run_evaluation(evaluation_id: int) -> Dict[str, Any]:
 
         logger.info(f"Evaluation {evaluation_id} completed")
         return {"id": run.id, "status": run.status}
+
+
+@celery_app.task(name="app.tasks.convert_artifact")
+def convert_artifact(artifact_id: int) -> Dict[str, Any]:
+    """
+    Stub conversion: if artifact is STEP/STP, generate a minimal glTF placeholder and update artifact.
+    """
+    with SessionLocal() as db:
+        art = db.get(models.DesignArtifact, artifact_id)
+        if not art:
+            return {"status": "not_found"}
+        ext = (art.type or '').lower()
+        if ext in ("gltf", "glb"):
+            return {"status": "skipped", "reason": "already glTF"}
+        # Generate minimal glTF JSON
+        gltf = {
+            "asset": {"version": "2.0", "generator": "IDP-Stub"},
+            "scenes": [{"nodes": [0]}],
+            "nodes": [{"mesh": 0}],
+            "meshes": [{"primitives": [{"attributes": {}}]}],
+        }
+        key = new_object_key(art.project_id, f"artifact_{artifact_id}.gltf")
+        upload_bytes(key, (str(gltf)).encode("utf-8"), "model/gltf+json")
+        # Update artifact to point to new glTF
+        art.object_key = key
+        art.object_mime = "model/gltf+json"
+        art.type = "gltf"
+        db.add(art)
+        db.commit()
+        db.refresh(art)
+        return {"status": "done", "artifact_id": artifact_id, "object_key": key}

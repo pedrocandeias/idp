@@ -14,4 +14,13 @@ until alembic upgrade head; do
 done
 
 echo "Starting Gunicorn..."
+# Seed default superadmin if configured (dev convenience)
+python - <<'PY'
+try:
+    from app.bootstrap import create_default_superadmin
+    create_default_superadmin()
+    print("[bootstrap] default superadmin check complete")
+except Exception as e:
+    print("[bootstrap] skipped or failed:", e)
+PY
 exec gunicorn -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8000 app.main:app

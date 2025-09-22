@@ -1,0 +1,339 @@
+# FreeCAD macro: generate three seed artifacts (STEP) + parametric JSON
+# Units: millimetres (mm). Coordinate frame:
+#   x = horizontal (right +), y = out of panel (toward user +), z = vertical up (+)
+#   For panel-based artifacts, origin (0,0,0) is the panel's bottom-left-front corner.
+
+import os, json, sys
+from math import radians
+try:
+    import FreeCAD as App
+    import Part
+except Exception as e:
+    raise RuntimeError("Run this inside FreeCAD. Error: %s" % e)
+
+# Output folder (edit if you want)
+OUTDIR = os.path.expanduser("~/idp_artifacts")
+os.makedirs(OUTDIR, exist_ok=True)
+
+def export_step(objs, path):
+    Part.export(objs, path)
+
+def write_json(data, path):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def make_panel(panel_w, panel_h, panel_t):
+    # Box: length along X (w), depth along Y (t), height along Z (h)
+    panel = Part.makeBox(panel_w, panel_t, panel_h)
+    obj = App.ActiveDocument.addObject("Part::Feature", "Panel")
+    obj.Shape = panel
+    obj.Placement.Base = App.Vector(0, 0, 0)
+    return obj
+
+def make_button(x, y, z, diameter, height, name="Button"):
+    # Cylinder along Y (outward normal), placed so front cap touches panel front
+    # Create at origin, then move so its front face is at y.
+    cyl = Part.makeCylinder(diameter/2.0, height, App.Vector(0,0,0), App.Vector(0,1,0))
+    obj = App.ActiveDocument.addObject("Part::Feature", name)
+    obj.Shape = cyl
+    # Place s.t. the front face coincides with y; cylinder runs along +Y
+    obj.Placement.Base = App.Vector(x, y, z)
+    return obj
+
+def make_knob(x, y, z, diameter, height, name="Knob"):
+    return make_button(x, y, z, diameter, height, name)
+
+def make_mushroom_button(x, y, z, head_d, head_h, stem_d, stem_h, name="EStop"):
+    # Stem
+    stem = Part.makeCylinder(stem_d/2.0, stem_h, App.Vector(0,0,0), App.Vector(0,1,0))
+    # Head (mushroom cap): short wide cylinder on top of stem
+    head = Part.makeCylinder(head_d/2.0, head_h, App.Vector(0,stem_h,0), App.Vector(0,1,0))
+    shape = stem.fuse(head)
+    obj = App.ActiveDocument.addObject("Part::Feature", name)
+    obj.Shape = shape
+    obj.Placement.Base = App.Vector(x, y, z)
+    return obj
+
+def make_handle_bar(x, y, z, length, diameter, standoff, name="Handle"):
+    # A straight horizontal handle bar offset from a backing plane by 'standoff'
+    # Represent as single cylinder (bar) + two mounting bosses touching the backing plane
+    bar = Part.makeCylinder(diameter/2.0, length, App.Vector(0,0,0), App.Vector(1,0,0))
+    boss_d = diameter * 1.2
+    boss_h = standoff
+    boss1 = Part.makeCylinder(boss_d/2.0, boss_h, App.Vector(0, -boss_h, 0), App.Vector(0,1,0))
+    boss2 = Part.makeCylinder(boss_d/2.0, boss_h, App.Vector(length, -boss_h, 0), App.Vector(0,1,0))
+    shape = bar.fuse(boss1).fuse(boss2)
+    obj = App.ActiveDocument.addObject("Part::Feature", name)
+    obj.Shape = shape
+    # Place centerline of bar at (x, y+standoff, z)
+    obj.Placement.Base = App.Vector(x, y + standoff, z)
+    return obj
+
+def artifact_kiosk_panel():
+    doc = App.newDocument("artifact_kiosk_panel")
+    panel_w, panel_h, panel_t = 300.0, 200.0, 5.0
+    panel = make_panel(panel_w, panel_h, panel_t)
+
+    # Controls (surface-mounted, y=0 means flush with panel front)
+    btn1 = make_button(x=60,  y=0, z=110, diameter=14, height=8,  name="Button_Start")
+    btn2 = make_button(x=140, y=0, z=110, diameter=14, height=8,  name="Button_Stop")
+    knob = make_knob(  x=220, y=0, z=110, diameter=28, height=15, name="Knob_Speed")
+
+    App.ActiveDocument.recompute()
+
+    # Parametric JSON (aligned with your RulePack fields)
+    params = {
+      "artifact": {
+        "id": "artifact-kiosk-panel",
+        "name": "Kiosk Control Panel",
+        "dimensions_mm": {"width_x": panel_w, "height_z": panel_h, "thickness_y": panel_t}
+      },
+      "controls": [
+        {
+          "id": "start",
+          "type": "button",
+          "priority": "primary",
+          "input_method": "finger",
+          "action": "push",
+          "position": {"x": 60, "y": 0, "z": 110},
+          "geometry": {"diameter_mm": 14},
+          "actuation": {"required_force_N": 22, "travel_mm": 1.2},
+          "surface": {"static_coefficient_friction": 0.55},
+          "feedback": {"tactile_or_audible": True}
+        },
+        {
+          "id": "stop",
+          "type": "button",
+          "priority": "primary",
+          "input_method": "finger",
+          "action": "push",
+          "position": {"x": 140, "y": 0, "z": 110},
+          "geometry": {"diameter_mm": 14},
+          "actuation": {"required_force_N": 22, "travel_mm": 1.2},
+          "surface": {"static_coefficient_friction": 0.55},
+          "feedback": {"tactile_or_audible": True}
+        },
+        {
+          "id": "speed",
+          "type": "knob",
+          "priority": "secondary",
+          "input_method": "power_grip",
+          "action": "rotate",
+          "position": {"x": 220, "y": 0, "z": 110},
+          "geometry": {"diameter_mm": 28},
+          "actuation": {"required_torque_Nm": 0.25},
+          "surface": {"static_coefficient_friction": 0.6},
+          "feedback": {"tactile_or_audible": True}
+        }
+      ],
+      "labels": [
+        {
+          "id": "lbl_start",
+          "type": "text",
+          "text": "START",
+          "position": {"x": 60, "y": 0, "z": 130},
+          "typography": {"x_height_mm": 2.5},
+          "color": {"fg_rgb": [255,255,255], "bg_rgb": [0,140,0]},
+          "material": {"gloss_units": 10},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        },
+        {
+          "id": "lbl_stop",
+          "type": "text",
+          "text": "STOP",
+          "position": {"x": 140, "y": 0, "z": 130},
+          "typography": {"x_height_mm": 2.5},
+          "color": {"fg_rgb": [255,255,255], "bg_rgb": [200,0,0]},
+          "material": {"gloss_units": 10},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        }
+      ],
+      "metrics": {
+        "controls": {
+          "min_center_distance_mm": 80  # distance between START and STOP centers (approx)
+        },
+        "clearances": {"min_gap_mm": 6}
+      },
+      "tasks": {
+        "primary": {
+          "operation_steps": [
+            {"id": "press_start", "requires_two_hands": False},
+            {"id": "adjust_speed", "requires_two_hands": False},
+            {"id": "press_stop",  "requires_two_hands": False}
+          ]
+        }
+      }
+    }
+
+    # Export
+    step_path = os.path.join(OUTDIR, "artifact-kiosk-panel.step")
+    export_step([panel, btn1, btn2, knob], step_path)
+    write_json(params, os.path.join(OUTDIR, "artifact-kiosk-panel.json"))
+    return step_path
+
+def artifact_handle_plate():
+    doc = App.newDocument("artifact_handle_plate")
+    # Backing plate (for reference)
+    plate_w, plate_h, plate_t = 220.0, 160.0, 6.0
+    plate = make_panel(plate_w, plate_h, plate_t)
+
+    # Handle
+    handle_len, handle_dia, standoff = 160.0, 32.0, 20.0
+    handle_z = 100.0
+    handle_x = 30.0  # left mounting at ~x=30, right at x=190
+    handle = make_handle_bar(x=handle_x, y=0, z=handle_z, length=handle_len, diameter=handle_dia, standoff=standoff)
+
+    App.ActiveDocument.recompute()
+
+    params = {
+      "artifact": {
+        "id": "artifact-handle-plate",
+        "name": "Handle on Plate",
+        "dimensions_mm": {"width_x": plate_w, "height_z": plate_h, "thickness_y": plate_t}
+      },
+      "controls": [
+        {
+          "id": "handle_main",
+          "type": "handle",
+          "priority": "primary",
+          "input_method": "power_grip",
+          "action": "pull",
+          "position": {"x": handle_x + handle_len/2.0, "y": standoff, "z": handle_z},
+          "geometry": {"diameter_mm": handle_dia},
+          "clearance": {"finger_back_mm": 18},
+          "surface": {"static_coefficient_friction": 0.6}
+        }
+      ],
+      "labels": [
+        {
+          "id": "lbl_open",
+          "type": "icon",
+          "icon_name": "open_arrow",
+          "position": {"x": handle_x + handle_len + 15, "y": 0, "z": handle_z},
+          "geometry": {"size_mm": 9},
+          "color": {"fg_rgb": [0,0,0], "bg_rgb": [255,255,255]},
+          "material": {"gloss_units": 15},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        }
+      ],
+      "metrics": {
+        "clearances": {"min_gap_mm": 6}
+      },
+      "tasks": {
+        "primary": {
+          "operation_steps": [
+            {"id": "pull_handle", "requires_two_hands": False}
+          ]
+        }
+      }
+    }
+
+    step_path = os.path.join(OUTDIR, "artifact-handle-plate.step")
+    export_step([plate, handle], step_path)
+    write_json(params, os.path.join(OUTDIR, "artifact-handle-plate.json"))
+    return step_path
+
+def artifact_outdoor_box():
+    doc = App.newDocument("artifact_outdoor_box")
+    # Enclosure
+    box_w, box_h, box_t = 240.0, 240.0, 80.0  # depth here is just body depth; front is at y=0
+    box = Part.makeBox(box_w, box_t, box_h)
+    box_obj = App.ActiveDocument.addObject("Part::Feature", "Enclosure")
+    box_obj.Shape = box
+    box_obj.Placement.Base = App.Vector(0, 0, 0)
+
+    # Emergency stop (mushroom) on front face
+    estop = make_mushroom_button(
+        x=120, y=0, z=130,
+        head_d=40, head_h=10,
+        stem_d=18, stem_h=12,
+        name="EStop"
+    )
+
+    App.ActiveDocument.recompute()
+
+    params = {
+      "artifact": {
+        "id": "artifact-outdoor-box",
+        "name": "Outdoor Box with E-stop",
+        "dimensions_mm": {"width_x": box_w, "height_z": box_h, "depth_y": box_t}
+      },
+      "controls": [
+        {
+          "id": "estop",
+          "type": "button",
+          "priority": "primary",
+          "input_method": "palm",
+          "action": "push",
+          "position": {"x": 120, "y": 0, "z": 130},
+          "geometry": {"diameter_mm": 40},
+          "actuation": {"required_force_N": 28, "travel_mm": 1.5},
+          "surface": {"static_coefficient_friction": 0.7},
+          "feedback": {"tactile_or_audible": True}
+        }
+      ],
+      "labels": [
+        {
+          "id": "lbl_estop",
+          "type": "text",
+          "text": "EMERGENCY STOP",
+          "position": {"x": 120, "y": 0, "z": 160},
+          "typography": {"x_height_mm": 3.0},
+          "color": {"fg_rgb": [0,0,0], "bg_rgb": [255,255,0]},
+          "material": {"gloss_units": 8},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        },
+        {
+          "id": "lbl_icon_power",
+          "type": "icon",
+          "icon_name": "power",
+          "position": {"x": 120, "y": 0, "z": 100},
+          "geometry": {"size_mm": 10},
+          "color": {"fg_rgb": [0,0,0], "bg_rgb": [255,255,255]},
+          "material": {"gloss_units": 8},
+          "mounting": {"surface_color_variable": False, "has_background_plate": True}
+        }
+      ],
+      "metrics": {
+        "controls": {
+          "min_center_distance_mm": 9999  # single control; set large sentinel or compute later
+        },
+        "clearances": {"min_gap_mm": 6}
+      },
+      "tasks": {
+        "primary": {
+          "operation_steps": [
+            {"id": "press_estop", "requires_two_hands": False}
+          ]
+        }
+      }
+    }
+
+    step_path = os.path.join(OUTDIR, "artifact-outdoor-box.step")
+    export_step([box_obj, estop], step_path)
+    write_json(params, os.path.join(OUTDIR, "artifact-outdoor-box.json"))
+    return step_path
+
+def main():
+    paths = []
+    try:
+        paths.append(artifact_kiosk_panel())
+        paths.append(artifact_handle_plate())
+        paths.append(artifact_outdoor_box())
+    finally:
+        App.ActiveDocument = None
+    manifest = {
+      "artifacts": [
+        {"id": "artifact-kiosk-panel", "step": "artifact-kiosk-panel.step", "json": "artifact-kiosk-panel.json"},
+        {"id": "artifact-handle-plate", "step": "artifact-handle-plate.step", "json": "artifact-handle-plate.json"},
+        {"id": "artifact-outdoor-box", "step": "artifact-outdoor-box.step", "json": "artifact-outdoor-box.json"}
+      ],
+      "outdir": OUTDIR,
+      "units": "mm",
+      "coordinate_frame": "x-right, y-outward, z-up; origin at front-face bottom-left corner unless otherwise noted"
+    }
+    write_json(manifest, os.path.join(OUTDIR, "manifest.json"))
+    print("Exported artifacts to:", OUTDIR)
+
+if __name__ == "__main__":
+    main()

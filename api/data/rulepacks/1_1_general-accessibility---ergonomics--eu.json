@@ -1,0 +1,1023 @@
+{
+  "id": 1,
+  "org_id": 1,
+  "name": "General Accessibility & Ergonomics (EU)",
+  "version": "1.0.0",
+  "rules": {
+    "id": "general-eu-v1",
+    "name": "General Accessibility & Ergonomics (EU)",
+    "version": "1.0.0",
+    "jurisdiction": [
+      "EU"
+    ],
+    "sector": [
+      "consumer_products",
+      "public_devices"
+    ],
+    "default_population": {
+      "anthropometrics_dataset_id": "demo-anthro-v1",
+      "ability_profile_ids": [
+        "demo-abilities-adult-v1"
+      ],
+      "segments": [
+        {
+          "name": "adult_all",
+          "filters": {
+            "age_min": 18,
+            "age_max": 75
+          }
+        },
+        {
+          "name": "senior_all",
+          "filters": {
+            "age_min": 65,
+            "age_max": 90
+          }
+        }
+      ],
+      "percentiles": [
+        5,
+        50,
+        95
+      ]
+    },
+    "meta": {
+      "units": "SI-metric",
+      "notes": "Numeric thresholds reflect common ergonomic practice and public standards guidance. Tune to org policy."
+    },
+    "rules": [
+      {
+        "id": "reach-standing-vertical-max",
+        "title": "Standing reachable height (max) for primary controls",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type in ['button','knob','toggle','switch'] && control.priority == 'primary'",
+        "bindings": [
+          {
+            "name": "h_mm",
+            "from": "target",
+            "path": "position.z"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "vr_mm",
+            "from": "anthro",
+            "metric": "vertical_reach_max_mm",
+            "filters": {
+              "posture": "standing"
+            },
+            "percentile_var": "p"
+          }
+        ],
+        "condition": "h_mm <= vr_mm",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.95
+        },
+        "severity": "critical",
+        "citation": [
+          {
+            "standard": "ISO 14738",
+            "clause": "8.2.2"
+          }
+        ],
+        "rationale": "Primary actuation must be reachable by small-stature users.",
+        "remediation": "Lower the control or tilt it within standing vertical reach for 5th percentile users."
+      },
+      {
+        "id": "reach-seated-vertical-max",
+        "title": "Seated reachable height (max) for primary controls",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type in ['button','knob','toggle','switch'] && scenario.posture == 'seated'",
+        "bindings": [
+          {
+            "name": "h_mm",
+            "from": "target",
+            "path": "position.z"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "vr_mm",
+            "from": "anthro",
+            "metric": "vertical_reach_max_mm",
+            "filters": {
+              "posture": "seated"
+            },
+            "percentile_var": "p"
+          }
+        ],
+        "condition": "h_mm <= vr_mm",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.95
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "ISO 14738",
+            "clause": "8.2.3"
+          }
+        ],
+        "rationale": "Seated posture decreases vertical reach; controls must remain reachable.",
+        "remediation": "Lower actuation plane or provide alternative reachable control."
+      },
+      {
+        "id": "reach-forward-distance",
+        "title": "Forward reach distance to control (standing)",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "scenario.posture == 'standing'",
+        "bindings": [
+          {
+            "name": "d_mm",
+            "from": "target",
+            "path": "position.y"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "fr_mm",
+            "from": "anthro",
+            "metric": "forward_reach_max_mm",
+            "filters": {
+              "posture": "standing"
+            },
+            "percentile_var": "p"
+          }
+        ],
+        "condition": "d_mm <= fr_mm",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.95
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "ISO 26800",
+            "clause": "6.3"
+          }
+        ],
+        "rationale": "Controls should be within forward reach of small-stature users.",
+        "remediation": "Bring the control plane closer; avoid deep recesses."
+      },
+      {
+        "id": "reach-lateral-distance-seated",
+        "title": "Seated lateral reach to secondary controls",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "scenario.posture == 'seated' && control.priority == 'secondary'",
+        "bindings": [
+          {
+            "name": "lx_mm",
+            "from": "target",
+            "path": "position.x_abs"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "lr_mm",
+            "from": "anthro",
+            "metric": "lateral_reach_max_mm",
+            "filters": {
+              "posture": "seated"
+            },
+            "percentile_var": "p"
+          }
+        ],
+        "condition": "lx_mm <= lr_mm",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.9
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 14738",
+            "clause": "8.2.4"
+          }
+        ],
+        "rationale": "Secondary controls can be wider but must remain accessible.",
+        "remediation": "Cluster secondary controls closer to midline."
+      },
+      {
+        "id": "control-spacing-center",
+        "title": "Minimum center-to-center spacing between controls",
+        "scope": "artifact",
+        "target_selector": "$",
+        "bindings": [
+          {
+            "name": "min_cc_mm",
+            "from": "scenario",
+            "path": "policies.min_control_cc_mm",
+            "fallback": 19
+          },
+          {
+            "name": "cc_min_measured_mm",
+            "from": "target",
+            "path": "metrics.controls.min_center_distance_mm"
+          }
+        ],
+        "condition": "cc_min_measured_mm >= min_cc_mm",
+        "aggregation": {
+          "mode": "single"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "ISO 9241-410",
+            "clause": "5.3"
+          }
+        ],
+        "rationale": "Avoid accidental activation and allow finger access.",
+        "remediation": "Increase spacing or stagger controls."
+      },
+      {
+        "id": "button-diameter-min",
+        "title": "Minimum button size for finger actuation",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'button' && control.input_method == 'finger'",
+        "bindings": [
+          {
+            "name": "dia_mm",
+            "from": "target",
+            "path": "geometry.diameter_mm"
+          },
+          {
+            "name": "min_d_mm",
+            "from": "scenario",
+            "path": "policies.min_button_diameter_mm",
+            "fallback": 12
+          }
+        ],
+        "condition": "dia_mm >= min_d_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "ISO 9241-400",
+            "clause": "6.4"
+          }
+        ],
+        "rationale": "Small buttons reduce accuracy and increase exclusion.",
+        "remediation": "Increase diameter or use a concave cap."
+      },
+      {
+        "id": "button-diameter-glove",
+        "title": "Minimum button size for glove use",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'button' && scenario.glove_required == true",
+        "bindings": [
+          {
+            "name": "dia_mm",
+            "from": "target",
+            "path": "geometry.diameter_mm"
+          },
+          {
+            "name": "min_d_mm",
+            "from": "scenario",
+            "path": "policies.min_button_diameter_glove_mm",
+            "fallback": 20
+          }
+        ],
+        "condition": "dia_mm >= min_d_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.3"
+          }
+        ],
+        "rationale": "Gloves require larger target areas.",
+        "remediation": "Use larger buttons or guarded paddles."
+      },
+      {
+        "id": "knob-diameter-min",
+        "title": "Minimum knob diameter for power grip",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'knob'",
+        "bindings": [
+          {
+            "name": "dia_mm",
+            "from": "target",
+            "path": "geometry.diameter_mm"
+          },
+          {
+            "name": "min_d_mm",
+            "from": "scenario",
+            "path": "policies.min_knob_diameter_mm",
+            "fallback": 25
+          }
+        ],
+        "condition": "dia_mm >= min_d_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.5"
+          }
+        ],
+        "rationale": "Adequate diameter improves torque generation and comfort.",
+        "remediation": "Increase knob diameter or add lever."
+      },
+      {
+        "id": "handle-grip-diameter-range",
+        "title": "Handle grip diameter within ergonomic range",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'handle'",
+        "bindings": [
+          {
+            "name": "dia_mm",
+            "from": "target",
+            "path": "geometry.diameter_mm"
+          },
+          {
+            "name": "min_mm",
+            "from": "scenario",
+            "path": "policies.handle_diameter_min_mm",
+            "fallback": 30
+          },
+          {
+            "name": "max_mm",
+            "from": "scenario",
+            "path": "policies.handle_diameter_max_mm",
+            "fallback": 50
+          }
+        ],
+        "condition": "dia_mm >= min_mm && dia_mm <= max_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 11164",
+            "clause": "Annex A (informative)"
+          }
+        ],
+        "rationale": "Grip diameter affects comfort and available force.",
+        "remediation": "Adjust handle profile or add overmold."
+      },
+      {
+        "id": "finger-clearance-behind-handle",
+        "title": "Finger clearance behind handle",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'handle'",
+        "bindings": [
+          {
+            "name": "clear_mm",
+            "from": "target",
+            "path": "clearance.finger_back_mm"
+          },
+          {
+            "name": "min_clear_mm",
+            "from": "scenario",
+            "path": "policies.min_finger_clearance_mm",
+            "fallback": 10
+          }
+        ],
+        "condition": "clear_mm >= min_clear_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.7"
+          }
+        ],
+        "rationale": "Insufficient clearance prevents secure grasp for larger fingers.",
+        "remediation": "Offset handle or increase standoff from surface."
+      },
+      {
+        "id": "actuation-push-force-threshold",
+        "title": "Required push force vs ability (finger/thumb)",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.action == 'push'",
+        "bindings": [
+          {
+            "name": "req_N",
+            "from": "target",
+            "path": "actuation.required_force_N"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "cap_N",
+            "from": "abilities",
+            "metric": "push_force_finger_N",
+            "percentile_var": "p"
+          },
+          {
+            "name": "sf",
+            "from": "scenario",
+            "path": "policies.force_safety_factor",
+            "fallback": 0.7
+          }
+        ],
+        "condition": "req_N <= cap_N * sf",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.9
+        },
+        "severity": "critical",
+        "citation": [
+          {
+            "standard": "ISO 11228-1",
+            "clause": "6.2"
+          }
+        ],
+        "rationale": "Actuation must be feasible for low-strength users with margin.",
+        "remediation": "Reduce spring rate, increase leverage, or add assist."
+      },
+      {
+        "id": "actuation-toggle-torque-threshold",
+        "title": "Required toggle/rotation torque vs ability",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.action in ['rotate','toggle']",
+        "bindings": [
+          {
+            "name": "req_Nm",
+            "from": "target",
+            "path": "actuation.required_torque_Nm"
+          },
+          {
+            "name": "p",
+            "from": "scenario",
+            "path": "population.percentile",
+            "fallback": 5
+          },
+          {
+            "name": "cap_Nm",
+            "from": "abilities",
+            "metric": "power_grip_torque_Nm",
+            "percentile_var": "p"
+          },
+          {
+            "name": "sf",
+            "from": "scenario",
+            "path": "policies.torque_safety_factor",
+            "fallback": 0.7
+          }
+        ],
+        "condition": "req_Nm <= cap_Nm * sf",
+        "aggregation": {
+          "mode": "per_target",
+          "population": "percentile_coverage",
+          "coverage_threshold": 0.9
+        },
+        "severity": "critical",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.6"
+          }
+        ],
+        "rationale": "Torque requirements must respect population strength distribution.",
+        "remediation": "Increase knob diameter/lever arm or reduce detent torque."
+      },
+      {
+        "id": "label-contrast-wcag-aa",
+        "title": "Label contrast ratio (WCAG AA)",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "bindings": [
+          {
+            "name": "fg_rgb",
+            "from": "target",
+            "path": "color.fg_rgb"
+          },
+          {
+            "name": "bg_rgb",
+            "from": "target",
+            "path": "color.bg_rgb"
+          },
+          {
+            "name": "ratio",
+            "from": "scenario",
+            "path": "computed.wcag_contrast_ratio",
+            "fallback": null,
+            "compute": {
+              "fn": "wcag_contrast",
+              "args": [
+                "fg_rgb",
+                "bg_rgb"
+              ]
+            }
+          },
+          {
+            "name": "min_ratio",
+            "from": "scenario",
+            "path": "policies.min_contrast_ratio",
+            "fallback": 4.5
+          }
+        ],
+        "condition": "ratio >= min_ratio",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "WCAG 2.2",
+            "clause": "1.4.3"
+          }
+        ],
+        "rationale": "Low contrast impairs readability for low-vision users.",
+        "remediation": "Adjust colors or add outline/high-contrast label plate."
+      },
+      {
+        "id": "label-font-angular-size",
+        "title": "Minimum angular x-height at viewing distance",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "bindings": [
+          {
+            "name": "x_mm",
+            "from": "target",
+            "path": "typography.x_height_mm"
+          },
+          {
+            "name": "d_mm",
+            "from": "scenario",
+            "path": "viewing.distance_mm"
+          },
+          {
+            "name": "deg",
+            "from": "scenario",
+            "path": "computed.angular_deg",
+            "fallback": null,
+            "compute": {
+              "fn": "atan_deg",
+              "args": [
+                "x_mm",
+                "d_mm"
+              ]
+            }
+          },
+          {
+            "name": "min_deg",
+            "from": "scenario",
+            "path": "policies.min_xheight_deg",
+            "fallback": 0.3
+          }
+        ],
+        "condition": "deg >= min_deg",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 9241-303",
+            "clause": "7.2"
+          }
+        ],
+        "rationale": "Ensures legibility at specified viewing distance.",
+        "remediation": "Increase font size or reduce viewing distance requirement."
+      },
+      {
+        "id": "icon-size-min",
+        "title": "Minimum icon size (mm or angular)",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "applies_if": "label.type == 'icon'",
+        "bindings": [
+          {
+            "name": "s_mm",
+            "from": "target",
+            "path": "geometry.size_mm"
+          },
+          {
+            "name": "d_mm",
+            "from": "scenario",
+            "path": "viewing.distance_mm"
+          },
+          {
+            "name": "ang_deg",
+            "from": "scenario",
+            "path": "computed.angular_deg",
+            "fallback": null,
+            "compute": {
+              "fn": "atan_deg",
+              "args": [
+                "s_mm",
+                "d_mm"
+              ]
+            }
+          },
+          {
+            "name": "min_mm",
+            "from": "scenario",
+            "path": "policies.min_icon_size_mm",
+            "fallback": 7
+          },
+          {
+            "name": "min_deg",
+            "from": "scenario",
+            "path": "policies.min_icon_angle_deg",
+            "fallback": 0.3
+          }
+        ],
+        "condition": "(s_mm >= min_mm) || (ang_deg >= min_deg)",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 3864-1",
+            "clause": "Annex"
+          }
+        ],
+        "rationale": "Icons must be discernible at intended distance.",
+        "remediation": "Increase icon size or position closer to user."
+      },
+      {
+        "id": "colorblind-safe-pairing",
+        "title": "Color pair distinguishability (CVD robust)",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "applies_if": "label.uses_color_coding == true",
+        "bindings": [
+          {
+            "name": "fg_rgb",
+            "from": "target",
+            "path": "color.fg_rgb"
+          },
+          {
+            "name": "bg_rgb",
+            "from": "target",
+            "path": "color.bg_rgb"
+          },
+          {
+            "name": "delta_lstar",
+            "from": "scenario",
+            "path": "computed.delta_lstar",
+            "fallback": null,
+            "compute": {
+              "fn": "deltaLstar",
+              "args": [
+                "fg_rgb",
+                "bg_rgb"
+              ]
+            }
+          },
+          {
+            "name": "min_dl",
+            "from": "scenario",
+            "path": "policies.min_delta_lstar",
+            "fallback": 20
+          }
+        ],
+        "condition": "delta_lstar >= min_dl",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "advisory",
+        "citation": [
+          {
+            "standard": "ISO 9241-391",
+            "clause": "7"
+          }
+        ],
+        "rationale": "Luminance difference improves distinguishability for CVD users.",
+        "remediation": "Add pattern/shape cues or increase luminance difference."
+      },
+      {
+        "id": "audibility-spl",
+        "title": "Audible alert level over ambient",
+        "scope": "artifact",
+        "target_selector": "$",
+        "applies_if": "scenario.alerts.enabled == true",
+        "bindings": [
+          {
+            "name": "alert_spl_dba",
+            "from": "scenario",
+            "path": "alerts.alert_level_dBA"
+          },
+          {
+            "name": "ambient_dba",
+            "from": "scenario",
+            "path": "environment.ambient_dBA",
+            "fallback": 35
+          },
+          {
+            "name": "delta_db",
+            "from": "scenario",
+            "path": "computed.delta_db",
+            "fallback": null,
+            "compute": {
+              "fn": "sub",
+              "args": [
+                "alert_spl_dba",
+                "ambient_dba"
+              ]
+            }
+          },
+          {
+            "name": "min_delta_db",
+            "from": "scenario",
+            "path": "policies.min_alert_over_ambient_db",
+            "fallback": 10
+          },
+          {
+            "name": "min_abs_db",
+            "from": "scenario",
+            "path": "policies.min_alert_abs_dba",
+            "fallback": 45
+          }
+        ],
+        "condition": "(delta_db >= min_delta_db) && (alert_spl_dba >= min_abs_db)",
+        "aggregation": {
+          "mode": "single"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 7731",
+            "clause": "5.2"
+          }
+        ],
+        "rationale": "Alerts must be audible over ambient noise without being harmful.",
+        "remediation": "Raise alert level, change frequency content, or add visual cue."
+      },
+      {
+        "id": "one-hand-operability",
+        "title": "Primary task operable with one hand",
+        "scope": "artifact",
+        "target_selector": "$",
+        "applies_if": "scenario.operability_requirements.one_hand == true",
+        "bindings": [
+          {
+            "name": "ops",
+            "from": "target",
+            "path": "tasks.primary.operation_steps"
+          },
+          {
+            "name": "requires_two_hands",
+            "from": "scenario",
+            "path": "computed.requires_two_hands",
+            "fallback": null,
+            "compute": {
+              "fn": "any",
+              "args": [
+                "ops[*].requires_two_hands"
+              ]
+            }
+          }
+        ],
+        "condition": "requires_two_hands == false",
+        "aggregation": {
+          "mode": "single"
+        },
+        "severity": "major",
+        "citation": [
+          {
+            "standard": "EN 17210",
+            "clause": "7.3"
+          }
+        ],
+        "rationale": "One-handed operation improves inclusivity for users with unilateral limitations.",
+        "remediation": "Redesign steps to avoid simultaneous opposing forces; add latching."
+      },
+      {
+        "id": "pinch-gap-safety",
+        "title": "Pinch gap safety near controls",
+        "scope": "artifact",
+        "target_selector": "$",
+        "bindings": [
+          {
+            "name": "min_gap_mm",
+            "from": "target",
+            "path": "metrics.clearances.min_gap_mm"
+          },
+          {
+            "name": "safe_gap_mm",
+            "from": "scenario",
+            "path": "policies.min_safe_gap_mm",
+            "fallback": 5
+          }
+        ],
+        "condition": "min_gap_mm >= safe_gap_mm",
+        "aggregation": {
+          "mode": "single"
+        },
+        "severity": "critical",
+        "citation": [
+          {
+            "standard": "ISO 13857",
+            "clause": "4.2"
+          }
+        ],
+        "rationale": "Avoid finger entrapment hazards.",
+        "remediation": "Increase gap or add guards/cover."
+      },
+      {
+        "id": "surface-slip-resistance",
+        "title": "Control surface slip resistance",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "bindings": [
+          {
+            "name": "cof",
+            "from": "target",
+            "path": "surface.static_coefficient_friction"
+          },
+          {
+            "name": "min_cof",
+            "from": "scenario",
+            "path": "policies.min_control_surface_cof",
+            "fallback": 0.5
+          }
+        ],
+        "condition": "cof >= min_cof",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.8"
+          }
+        ],
+        "rationale": "Low friction increases slip risk under sweat or gloves.",
+        "remediation": "Add texture or soft overmold."
+      },
+      {
+        "id": "feedback-confirmation",
+        "title": "Tactile/audible feedback on actuation",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "bindings": [
+          {
+            "name": "has_feedback",
+            "from": "target",
+            "path": "feedback.tactile_or_audible"
+          }
+        ],
+        "condition": "has_feedback == true",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "advisory",
+        "citation": [
+          {
+            "standard": "EN 894-2",
+            "clause": "6.1"
+          }
+        ],
+        "rationale": "Feedback reduces uncertainty and repeat presses.",
+        "remediation": "Add detent/click or audible cue."
+      },
+      {
+        "id": "visual-glare-check",
+        "title": "Glare risk under specified illuminance",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "bindings": [
+          {
+            "name": "finish_gloss",
+            "from": "target",
+            "path": "material.gloss_units"
+          },
+          {
+            "name": "lux",
+            "from": "scenario",
+            "path": "environment.illuminance_lux",
+            "fallback": 500
+          },
+          {
+            "name": "max_gloss",
+            "from": "scenario",
+            "path": "policies.max_label_gloss_units",
+            "fallback": 20
+          }
+        ],
+        "condition": "(lux >= 300 && finish_gloss <= max_gloss) || (lux < 300)",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "advisory",
+        "citation": [
+          {
+            "standard": "ISO 9241-303",
+            "clause": "8.3"
+          }
+        ],
+        "rationale": "High-gloss labels can cause glare and reduce legibility.",
+        "remediation": "Use matte finish or anti-glare lens."
+      },
+      {
+        "id": "control-travel-distance",
+        "title": "Button travel distance within comfortable range",
+        "scope": "control",
+        "target_selector": "$.controls[*]",
+        "applies_if": "control.type == 'button'",
+        "bindings": [
+          {
+            "name": "travel_mm",
+            "from": "target",
+            "path": "actuation.travel_mm"
+          },
+          {
+            "name": "min_mm",
+            "from": "scenario",
+            "path": "policies.min_button_travel_mm",
+            "fallback": 0.5
+          },
+          {
+            "name": "max_mm",
+            "from": "scenario",
+            "path": "policies.max_button_travel_mm",
+            "fallback": 2
+          }
+        ],
+        "condition": "travel_mm >= min_mm && travel_mm <= max_mm",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "advisory",
+        "citation": [
+          {
+            "standard": "EN 894-3",
+            "clause": "5.9"
+          }
+        ],
+        "rationale": "Too little travel reduces feedback; too much increases fatigue.",
+        "remediation": "Change mechanism or dome specification."
+      },
+      {
+        "id": "contrast-label-background-plate",
+        "title": "Provide high-contrast label background plate when substrate is variable",
+        "scope": "label",
+        "target_selector": "$.labels[*]",
+        "applies_if": "label.mounting.surface_color_variable == true",
+        "bindings": [
+          {
+            "name": "has_plate",
+            "from": "target",
+            "path": "mounting.has_background_plate"
+          }
+        ],
+        "condition": "has_plate == true",
+        "aggregation": {
+          "mode": "per_target"
+        },
+        "severity": "minor",
+        "citation": [
+          {
+            "standard": "ISO 9241-171",
+            "clause": "9.4"
+          }
+        ],
+        "rationale": "Maintains contrast regardless of substrate color.",
+        "remediation": "Add opaque background plate behind label."
+      }
+    ]
+  }
+}
