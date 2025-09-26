@@ -94,7 +94,7 @@ def load_all_from_json() -> None:
     if not base.exists():
         return
     with SessionLocal() as db:
-        # Rulepacks
+        # Rulepacks (id from file is not enforced to avoid sequence conflicts)
         rp_dir = base / "rulepacks"
         if rp_dir.exists():
             for p in rp_dir.glob("*.json"):
@@ -102,62 +102,84 @@ def load_all_from_json() -> None:
                     data = json.loads(p.read_text(encoding="utf-8"))
                     if not isinstance(data, dict):
                         continue
-                    rid = data.get("id")
-                    if rid is None:
-                        continue
-                    obj = db.get(models.RulePack, rid)
+                    org_id = data.get("org_id") or 1
+                    name = data.get("name") or ""
+                    obj = (
+                        db.query(models.RulePack)
+                        .filter(models.RulePack.org_id == org_id, models.RulePack.name == name)
+                        .first()
+                    )
                     if obj is None:
                         obj = models.RulePack(
-                            id=rid,
-                            org_id=data.get("org_id") or 1,
-                            name=data.get("name") or "",
+                            org_id=org_id,
+                            name=name,
                             rules=data.get("rules"),
                         )
                         setattr(obj, "version", data.get("version"))
                         db.add(obj)
                         db.commit()
+                    else:
+                        # Update in place
+                        obj.rules = data.get("rules")
+                        setattr(obj, "version", data.get("version"))
+                        db.add(obj)
+                        db.commit()
                 except Exception:
                     continue
-        # Anthropometrics
+        # Anthropometrics (match by name/org; don't force id)
         an_dir = base / "anthropometrics"
         if an_dir.exists():
             for p in an_dir.glob("*.json"):
                 try:
                     data = json.loads(p.read_text(encoding="utf-8"))
-                    rid = data.get("id")
-                    if rid is None:
-                        continue
-                    obj = db.get(models.AnthropometricDataset, rid)
+                    org_id = data.get("org_id") or 1
+                    name = data.get("name") or ""
+                    obj = (
+                        db.query(models.AnthropometricDataset)
+                        .filter(models.AnthropometricDataset.org_id == org_id, models.AnthropometricDataset.name == name)
+                        .first()
+                    )
                     if obj is None:
                         obj = models.AnthropometricDataset(
-                            id=rid,
-                            org_id=data.get("org_id") or 1,
-                            name=data.get("name") or "",
+                            org_id=org_id,
+                            name=name,
                             source=data.get("source"),
                             schema=data.get("schema"),
                             distributions=data.get("distributions"),
                         )
                         db.add(obj)
                         db.commit()
+                    else:
+                        obj.source = data.get("source")
+                        obj.schema = data.get("schema")
+                        obj.distributions = data.get("distributions")
+                        db.add(obj)
+                        db.commit()
                 except Exception:
                     continue
-        # Abilities
+        # Abilities (match by name/org; don't force id)
         ab_dir = base / "abilities"
         if ab_dir.exists():
             for p in ab_dir.glob("*.json"):
                 try:
                     data = json.loads(p.read_text(encoding="utf-8"))
-                    rid = data.get("id")
-                    if rid is None:
-                        continue
-                    obj = db.get(models.AbilityProfile, rid)
+                    org_id = data.get("org_id") or 1
+                    name = data.get("name") or ""
+                    obj = (
+                        db.query(models.AbilityProfile)
+                        .filter(models.AbilityProfile.org_id == org_id, models.AbilityProfile.name == name)
+                        .first()
+                    )
                     if obj is None:
                         obj = models.AbilityProfile(
-                            id=rid,
-                            org_id=data.get("org_id") or 1,
-                            name=data.get("name") or "",
+                            org_id=org_id,
+                            name=name,
                             data=data.get("data"),
                         )
+                        db.add(obj)
+                        db.commit()
+                    else:
+                        obj.data = data.get("data")
                         db.add(obj)
                         db.commit()
                 except Exception:

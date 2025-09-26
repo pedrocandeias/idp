@@ -4,6 +4,7 @@ import os
 
 from . import models
 from .db import SessionLocal
+from sqlalchemy import text
 from .security import hash_password
 
 
@@ -44,3 +45,40 @@ def create_default_superadmin() -> None:
         db.add(user)
         db.commit()
 
+
+def repair_sequences() -> None:
+    """
+    Ensure PostgreSQL sequences are in sync with current MAX(id) for tables.
+    Useful after earlier seeds that inserted explicit ids.
+    No-op on databases that don't support pg_get_serial_sequence.
+    """
+    tables = [
+        "orgs",
+        "users",
+        "projects",
+        "project_memberships",
+        "design_artifacts",
+        "anthropometric_datasets",
+        "ability_profiles",
+        "rule_packs",
+        "simulation_scenarios",
+        "evaluation_runs",
+        "adaptive_components",
+        "reports",
+    ]
+    try:
+        with SessionLocal() as db:
+            for t in tables:
+                stmt = text(
+                    f"SELECT setval(pg_get_serial_sequence('{t}', 'id'), "
+                    f"COALESCE((SELECT MAX(id) FROM {t}), 0) + 1, false)"
+                )
+                try:
+                    db.execute(stmt)
+                except Exception:
+                    # ignore if table or sequence not present
+                    continue
+            db.commit()
+    except Exception:
+        # Do not block startup if this fails
+        pass

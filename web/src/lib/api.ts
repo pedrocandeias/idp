@@ -117,8 +117,8 @@ export const api = {
     convert: (id: number) => request(`/api/v1/artifacts/${id}/convert`, { method: 'POST' }),
   },
   evaluations: {
-    enqueue: (artifact_id: number, scenario_id: number, rulepack_id: number) =>
-      request('/api/v1/evaluations', { method: 'POST', body: JSON.stringify({ artifact_id, scenario_id, rulepack_id }) }),
+    enqueue: (artifact_id: number, scenario_id: number, rulepack_id: number, opts?: { debug?: boolean; webhook_url?: string }) =>
+      request('/api/v1/evaluations', { method: 'POST', body: JSON.stringify({ artifact_id, scenario_id, rulepack_id, debug: opts?.debug ?? false, webhook_url: opts?.webhook_url }) }),
     get: (id: number) => request(`/api/v1/evaluations/${id}`),
     report: (id: number) => request(`/api/v1/evaluations/${id}/report`, { method: 'POST' }),
     delete: (id: number) => request(`/api/v1/evaluations/${id}`, { method: 'DELETE' }),

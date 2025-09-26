@@ -1,0 +1,37 @@
+{
+  "id": "scn-water-bottle-daily-v1",
+  "name": "Water Bottle — Daily Hydration (Handheld)",
+  "description": "Handheld opening/closing and drinking in indoor conditions. Emphasis on one-hand operability, reasonable torque, and legible labeling at arm’s length.",
+  "posture": "standing",
+  "glove_required": false,
+  "population": {
+    "anthropometrics_dataset_id": "demo-anthro-eu-v1",
+    "ability_profile_ids": ["demo-abilities-adult-v1"],
+    "percentiles_evaluate": [5, 50, 95],
+    "percentile": 5
+  },
+  "viewing": { "distance_mm": 350 },
+  "environment": { "illuminance_lux": 600, "ambient_dBA": 45 },
+  "alerts": { "enabled": false, "alert_level_dBA": 60 },
+  "operability_requirements": { "one_hand": true },
+  "policies": {
+    "min_control_cc_mm": 19,
+    "min_button_diameter_mm": 12,
+    "min_button_diameter_glove_mm": 20,
+    "min_knob_diameter_mm": 25,
+    "handle_diameter_min_mm": 30,
+    "handle_diameter_max_mm": 50,
+    "min_finger_clearance_mm": 10,
+    "force_safety_factor": 0.7,
+    "torque_safety_factor": 0.7,
+    "min_contrast_ratio": 4.5,
+    "min_safe_gap_mm": 5,
+    "min_control_surface_cof": 0.55,
+    "max_label_gloss_units": 20,
+    "min_button_travel_mm": 0.5,
+    "max_button_travel_mm": 2.0,
+    "min_icon_size_mm": 7,
+    "min_icon_angle_deg": 0.3,
+    "min_xheight_deg": 0.3
+  }
+}

@@ -106,14 +106,17 @@ def list_reports(
     )
     out = []
     for r in items:
+        # Prefer presigned URLs; fallback to API proxy if signing fails
+        proxy_html = f"/api/v1/files/get?key={r.html_key}" if r.html_key else None
+        proxy_pdf = f"/api/v1/files/get?key={r.pdf_key}" if r.pdf_key else None
         try:
-            html_url = presigned_get(r.html_key) if r.html_key else None
+            html_url = presigned_get(r.html_key) if r.html_key else proxy_html
         except Exception:
-            html_url = None
+            html_url = proxy_html
         try:
-            pdf_url = presigned_get(r.pdf_key) if r.pdf_key else None
+            pdf_url = presigned_get(r.pdf_key) if r.pdf_key else proxy_pdf
         except Exception:
-            pdf_url = None
+            pdf_url = proxy_pdf
         out.append(
             {
                 "id": r.id,

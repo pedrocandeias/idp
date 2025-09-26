@@ -31,6 +31,7 @@ def enqueue_evaluation(
     scenario_id = _as_int(payload.get("scenario_id"), "scenario_id")
     rulepack_id = _as_int(payload.get("rulepack_id"), "rulepack_id")
     webhook_url = payload.get("webhook_url")
+    debug = bool(payload.get("debug", False))
 
     scenario = db.get(models.SimulationScenario, scenario_id)
     rulepack = db.get(models.RulePack, rulepack_id)
@@ -53,6 +54,8 @@ def enqueue_evaluation(
             "rulepack_id": rulepack_id,
             "webhook_url": webhook_url,
             "scenario_id": scenario_id,
+            "debug": debug,
+            "log": [] if debug else None,
         },
     )
     db.add(run)
@@ -177,6 +180,18 @@ def create_report(
     db.commit()
     db.refresh(report)
 
+    # Build URLs, preferring presigned; fallback to API proxy
+    proxy_html = f"/api/v1/files/get?key={html_key}"
+    proxy_pdf = f"/api/v1/files/get?key={pdf_key}"
+    try:
+        html_url = presigned_get(html_key)
+    except Exception:
+        html_url = proxy_html
+    try:
+        pdf_url = presigned_get(pdf_key)
+    except Exception:
+        pdf_url = proxy_pdf
+
     return {
         "id": report.id,
         "project_id": report.project_id,
@@ -185,9 +200,8 @@ def create_report(
         "html_key": report.html_key,
         "pdf_key": report.pdf_key,
         "checksum_sha256": report.checksum_sha256,
-        # Use public endpoint for browser-accessible URLs
-        "presigned_html_url": presigned_get(html_key),
-        "presigned_pdf_url": presigned_get(pdf_key),
+        "presigned_html_url": html_url,
+        "presigned_pdf_url": pdf_url,
     }
 
 

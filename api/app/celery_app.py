@@ -19,4 +19,6 @@ celery_app.conf.update(
     task_serializer="json",
     result_serializer="json",
     accept_content=["json"],
+    # Silence CPendingDeprecationWarning and keep retry behavior on startup
+    broker_connection_retry_on_startup=True,
 )

@@ -17,11 +17,13 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
   const [rulepacks, setRulepacks] = useState<Array<{ id: number; name: string; version?: string }>>([]);
   const [newScenName, setNewScenName] = useState('');
   const [newScenConfig, setNewScenConfig] = useState('');
+  const [newScenFile, setNewScenFile] = useState<File | null>(null);
   const [newRpName, setNewRpName] = useState('');
   const [newRpVersion, setNewRpVersion] = useState('1.0.0');
   const [newRpRules, setNewRpRules] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<{ msg: string } | null>(null);
+  const [debugEval, setDebugEval] = useState(false);
 
   function onDrop(e: DragEvent) {
     e.preventDefault();
@@ -73,7 +75,7 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
     if (!artifact || !scenarioId || !rulepackId) return;
     setStatus('Enqueuing evaluation...');
     try {
-      const res = await api.evaluations.enqueue(artifact.id, Number(scenarioId), Number(rulepackId));
+      const res = await api.evaluations.enqueue(artifact.id, Number(scenarioId), Number(rulepackId), { debug: debugEval });
       window.location.hash = href({ name: 'evaluation', id: res.id });
     } catch (e: any) {
       setStatus(e.message);
@@ -84,12 +86,22 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
     e.preventDefault();
     try {
       let cfg: any = undefined;
-      if (newScenConfig.trim()) cfg = JSON.parse(newScenConfig);
-      const s = await api.scenarios.create(projectId, newScenName || 'Scenario', cfg);
+      // Prefer uploaded file content if provided; otherwise parse textarea
+      if (newScenFile) {
+        const text = await newScenFile.text();
+        cfg = text ? JSON.parse(text) : undefined;
+      } else if (newScenConfig.trim()) {
+        cfg = JSON.parse(newScenConfig);
+      }
+      // Default scenario name: explicit field > filename (without .json) > 'Scenario'
+      const fileBase = newScenFile?.name?.replace(/\.json$/i, '') || '';
+      const scenName = (newScenName || fileBase || 'Scenario').trim();
+      const s = await api.scenarios.create(projectId, scenName, cfg);
       setScenarios((prev) => [...prev, s]);
       setScenarioId(s.id);
       setNewScenName('');
       setNewScenConfig('');
+      setNewScenFile(null);
       setStatus('Scenario created');
     } catch (e: any) {
       setStatus(e.message || 'Failed to create scenario');
@@ -152,6 +164,8 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
               <form onSubmit={onCreateScenario} aria-label="Create scenario">
                 <label htmlFor="nsn">New name</label>
                 <input id="nsn" value={newScenName} onChange={(e) => setNewScenName(e.target.value)} placeholder="My Scenario" />
+                <label htmlFor="nscfile">Scenario JSON file (optional)</label>
+                <input id="nscfile" type="file" accept="application/json,.json" onChange={(e) => setNewScenFile(e.target.files?.[0] ?? null)} />
                 <label htmlFor="nscfg">Config JSON (optional)</label>
                 <textarea id="nscfg" value={newScenConfig} onChange={(e) => setNewScenConfig(e.target.value)} rows={4} placeholder='{"distance_to_control_cm":50}' />
                 <div className="space" />
@@ -183,6 +197,9 @@ export default function ArtifactsPage({ projectId }: { projectId: number }) {
           </div>
           <div className="space" />
           <form onSubmit={onLaunchEvaluation} className="row" aria-label="Launch evaluation">
+            <label className="row" style={{ alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={debugEval} onChange={(e)=>setDebugEval(e.target.checked)} /> Debug
+            </label>
             <button type="submit" aria-label="Enqueue evaluation" disabled={!scenarioId || !rulepackId}>Enqueue</button>
           </form>
         </div>

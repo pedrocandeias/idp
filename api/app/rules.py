@@ -92,7 +92,14 @@ def _eval_node(node: ast.AST, vars: Mapping[str, Any]) -> Any:
 
 
 def evaluate_condition(expr: str, variables: Mapping[str, Any]) -> bool:
-    tree = ast.parse(expr, mode="eval")
+    # Normalize common non-Python logical operators used in rule JSON
+    # e.g. use of '&&' / '||' from C/JS style.
+    normalized = (
+        expr.replace("&&", " and ")
+        .replace("||", " or ")
+        .strip()
+    )
+    tree = ast.parse(normalized, mode="eval")
     # Ensure no dangerous nodes present
     for n in ast.walk(tree):
         if isinstance(

@@ -17,6 +17,7 @@ from .routers import (
     users,
     projects,
     rulepacks,
+    files,
 )
 from .persistence import load_all_from_json
 
@@ -57,3 +58,4 @@ app.include_router(evaluations.router)
 app.include_router(users.router)
 app.include_router(admin.router)
 app.include_router(conversion.router)
+app.include_router(files.router)

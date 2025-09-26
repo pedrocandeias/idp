@@ -5,6 +5,9 @@ SQLAlchemy==2.0.35
 alembic==1.13.2
 psycopg2-binary==2.9.9
 passlib[bcrypt]==1.7.4
+# Pin bcrypt to a version compatible with passlib to avoid
+# the "error reading bcrypt version" warning at startup.
+bcrypt>=4.0.0,<4.1
 PyJWT==2.9.0
 pydantic==2.9.2
 pydantic-settings==2.6.1
