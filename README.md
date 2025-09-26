@@ -17,6 +17,8 @@ Monorepo for IDP. It includes a FastAPI backend with JWT auth, Postgres, Redis, 
 - Development (lint, tests, types)
 - CI on GitHub
 - Troubleshooting
+- How It Works (Architecture)
+- Evaluation Pipeline (Step‑by‑Step)
 
 ## Quick Start (Docker Compose)
 
@@ -227,3 +229,70 @@ docs/           # SECURITY.md and future docs
 
 ## License
 MIT
+
+## How It Works (Architecture)
+- Backend API: FastAPI app (`api/app/main.py`) with JWT auth, org scoping, RBAC, and CRUD for projects, artifacts, scenarios, rule packs, evaluations, reports.
+- Worker: Celery worker (`api/app/celery_app.py`) using Redis (broker + backend). Runs asynchronous tasks like `app.tasks.run_evaluation` and a stub `convert_artifact`.
+- Database: Postgres holds orgs, users, projects, artifacts, scenarios, rule packs, evaluation runs, reports (see `api/app/models.py`).
+- Object Storage: MinIO (S3‑compatible). Artifacts and generated reports are stored via S3 APIs (`api/app/storage.py`), with presigned GET/PUT URLs for the web/CLI.
+- Web UI: React + Vite app (`web/`) consuming the API and S3 presigned URLs for viewing models and reports.
+- Datasets/Rules: JSON rule packs and demo data live in `api/data` and are persisted under `api/app/persistence.py` when created/updated.
+
+Key data entities
+- Organization/Users: Users belong to an org and have roles (e.g., `designer`, `researcher`, `org_admin`, optional `superadmin`).
+- Project: Container for artifacts, scenarios, evaluations, and reports; belongs to an org.
+- DesignArtifact: A design file (e.g., GLTF/GLB/STEP) stored in MinIO, with an `object_key` and optional parameters JSON.
+- SimulationScenario: Parameters for evaluation (e.g., posture, distances, forces, colors) stored as JSON `config`.
+- RulePack: Versioned set of rules with safe boolean expressions that evaluate against provided variables.
+- EvaluationRun: A queued/run/finished job holding computed `results_json` and `inclusivity_index_json`.
+- Report: Rendered HTML/PDF report stored in MinIO with a checksum and presigned URLs.
+
+Security & access
+- Auth: JWT token from `/auth/token`; registration via `/auth/register` (dev/demo).
+- Org scope: Non‑superadmin users can only access projects within their org. Endpoints enforce org checks.
+- Roles: Upload/delete artifacts and create scenarios require editor roles; enqueue evaluations allowed for `org_admin`/`researcher`/`designer`; destructive actions are restricted.
+
+## Evaluation Pipeline (Step‑by‑Step)
+![Evaluation Flow](docs/evaluation-sequence.svg)
+
+1) Upload artifact
+- Endpoint: `POST /api/v1/projects/{project_id}/artifacts`
+- Stores content in MinIO at `projects/{project}/artifacts/...` and returns DB record + presigned GET URL. Optional `presign=true` supports browser‑side upload via presigned PUT.
+
+2) Create scenario and choose rule pack
+- Scenario: `POST /api/v1/scenarios` with `config` fields used by simulations:
+  - `distance_to_control_cm`, `posture` ("seated"|"standing"), `required_force_N`, `capability_N`, `fg_rgb`, `bg_rgb`, optional `button_w_mm`, `button_h_mm`.
+- Rule pack: `POST /api/v1/rulepacks` or pick an existing one; JSON contains `rules[]` with thresholds and a boolean `condition`.
+
+3) Enqueue an evaluation
+- Endpoint: `POST /api/v1/evaluations` with `{ artifact_id, scenario_id, rulepack_id, webhook_url? }`.
+- API validates references, org scope, and role, then creates an `evaluation_runs` row with `status=queued` and schedules the Celery task `app.tasks.run_evaluation(run.id)`.
+
+4) Worker executes the evaluation (Celery)
+- Task: `app.tasks.run_evaluation` loads the run, scenario, rule pack, and artifact.
+- Simulations (`api/app/simulations.py`):
+  - Reach: `reach_envelope_ok(distance_cm, posture)` → seated ≤ 60cm, standing ≤ 75cm.
+  - Strength: `strength_feasible(required_force_N, capability_N)` → capability ≥ required.
+  - Visual: `wcag_contrast_from_rgb(fg_rgb, bg_rgb)` → passes if contrast ≥ 4.5.
+- Rule evaluation (`api/app/rules.py`):
+  - Each rule defines thresholds and a safe expression `condition` (AST‑validated; no calls/attrs). Variables combine scenario inputs + thresholds (e.g., `w`, `h`, `min_mm`).
+  - `evaluate_rule` returns `{id, passed, severity}` for each rule; results aggregated under `results.rules`.
+- Inclusivity Index: `inclusivity_index(reach_ok, strength_ok, visual_ok)` weights reach 0.4, strength 0.3, visual 0.3, producing `score` in [0,1] and `components` booleans.
+- Persistence: The worker sets `status=done`, `completed_at`, and stores `results_json` and `inclusivity_index_json` on the run.
+- Optional webhook: If `webhook_url` was provided and `WEBHOOK_SECRET` is set, the worker POSTs `{id, status, results, index}` with header `X-IDP-Webhook`.
+
+5) Retrieve evaluation results
+- Endpoint: `GET /api/v1/evaluations/{id}` returns `status`, `metrics`, `results`, and `inclusivity_index` for polling UIs/CLIs.
+
+6) Generate a report
+- Endpoint: `POST /api/v1/evaluations/{id}/report` (requires `status=done`).
+- Rendering (`api/app/reporting.py`): Jinja2 HTML template with Inclusivity Index, rule outcomes, and change vs previous run. PDF via WeasyPrint if available; otherwise HTML bytes fallback.
+- Storage: Uploads HTML/PDF to MinIO at `projects/{project_id}/reports/{run.id}.html|.pdf`. A `reports` row is created and API returns presigned GET URLs for both.
+
+7) Optional conversion (STEP → glTF stub)
+- Task: `app.tasks.convert_artifact(artifact_id)` creates a minimal glTF placeholder and updates the artifact record; useful when STEP uploads need a quick viewer stub.
+
+Notes
+- Presigned URLs use the public S3 endpoint (`S3_PUBLIC_ENDPOINT_URL` if set) for browser access.
+- Rule expressions are sandboxed (AST‑based) and accept only numeric/boolean ops; no function calls or attribute access.
+- All endpoints enforce org scope; `superadmin` bypasses org checks for administration/testing.
